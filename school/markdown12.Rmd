@@ -1,0 +1,188 @@
+---
+title: "Data Analysis Report 12"
+author: "Will Kramlinger"
+date: "April 7, 2019"
+output: 
+  html_document:
+    code_folding: hide
+    toc: TRUE
+    toc_depth: 2
+    toc_float: TRUE
+    fig_caption: true
+    theme: spacelab
+---
+<style>
+body {
+text-align: justify}
+</style>
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+A data set comprising sales information for the Citrus Hill and Minute Maid brands of orange juice was analyzed.  Preliminary exploratory data analysis was performed and the data was cleaned such that it was suitable for support vector classifier/machine classification, which requires numeric predictor levels due to its reliance on euclidean distances. Subsequent analysis utilized the aforementioned methods to predictively model the binary response variable **Purchase**, which indicates which brand of orange juice was purchased. The success of prediction, as measured by test set error rates, was compared for 3 variants: support vector classifier, support vector machine (SVM) with radial kernel, and support vector machine with polynomial kernel.
+
+## Data
+The data set analyzed was the **OJ** data set found in the **ISLR** package in R. For a brief summary of the set and variable definitions, please refer to <https://rdrr.io/cran/ISLR/man/OJ.html>; the following shall presume the reader's familarity with the variable names and their meanings as they are used interchangeably. The set includes observations for 1070 purchases across 18 predictors. A check for missing values revealed no problems.
+
+Throughout all analyses, a fixed training set sample size of $n_{train} = 800$ was utilized, thus $n_{test} = 270$. This split was prescribed in the problem statement. Of note is that the same split was used for analysis with all methods, including when the effects of varying the cross-validation (CV) set.seed() parameter were investigated.
+
+```{r Setup, message = FALSE, warning = FALSE}
+rm(list = ls())
+library(ISLR)
+library(e1071)
+library(kableExtra)
+options(digits = 4)
+## Basic EDA
+df <- OJ
+# cor(df2[, -c(1, 13)])
+# Categorical variables that need to be fixed include: StoreID (5 levels: 1:4, 7), Store (5 levels: 0:4).  These seem to be duplicate variables.
+# plot(df$StoreID ~ df$STORE)
+# Duplicate variables confirmed
+# Create dummy variables for Store.  Use Store = 0 as reference.
+df2 <- data.frame(df, store1 = numeric(1070), 
+                 store2 = numeric(1070), 
+                 store3 = numeric(1070), 
+                 store4 = numeric(1070))
+for(i in 1:1070) {
+  for(j in 1:4){
+    if(df2$STORE[i] == j){
+      df2[i, 18 + j] <- 1
+    }
+  }
+}
+rm(i, j)
+df2 <- df2[ , -c(3, 18)]
+
+# Create train:test, where n_train = 800
+set.seed(1)
+indices <- sample(1:1070, size = 800)
+train <- df2[indices, ]
+test <- df2[-indices, ]
+
+# Assign design matrix as x
+model1 <- lm(Purchase ~ ., data = train)
+xtrain <- model.matrix(model1)[ , -1]
+model2 <- lm(Purchase ~ ., data = test)
+xtest <- model.matrix(model2)[ , -1]
+rm(model1, model2)
+
+# Create dat for svm()
+traindat <- data.frame(x = xtrain, y = as.factor(train$Purchase))
+testdat <- data.frame(x = xtest, y = as.factor(test$Purchase))
+```
+
+## Results and Discussion
+
+#### Exploratory Data Analysis (EDA)
+Exploratory data analysis was performed primarily via inspection of correlation and scatterplot matrices. However, via internet research by the experimenter, multicollinearity was deemed as rather unproblematic for SVM classification, thus the high correlations between *DiscCH - PctDiscCH* and *DiscMM - PctDiscMM* were ignored. 
+
+However, it was determined that the categorical variables with multiple (five) levels within each, *StoreID* and *STORE*, were essentially the same variable. Thus, *StoreID* was removed from the dataset. The variable *STORE*, with original predictor levels of 0 to 4, was then recoded into 4 dummy variables: *store1*, *store2*, *store3*, and *store4*.  The meanings of these variables are assumed to be self-explanatory; *STORE* = 0 was thus taken as the reference level. Despite the previous discussion about multicollinearity, the elimination of *StoreID* was performed to avoid over-weighting the effects of the store at which the juice was purchased.
+
+#### Support Vector Classifier
+Classification using the support vector classifier, i.e. assuming a perfectly linearly separable data set, was performed via the *svm()* function with argument *kernel = "linear"*. The predictors were normalized via the *scale = TRUE* argument. A summary of the fit is shown below.
+
+```{r SVC}
+#### Begin support vector classifier
+svmfit.svc <- svm(y ~., data = traindat, kernel = "linear", cost = 0.01, scale = TRUE)
+summary(svmfit.svc)
+```
+
+The summary results indicate that a linear kernel was used with $cost = 0.01$. Also, 426 support vectors (i.e., observations) were utilized in the determination of the decision boundary, 213 of each class.
+
+#### Support Vector Machine, Radial Kernel
+Classification using the support vector machine, i.e. assuming a non-perfectly linearly separable data set, was performed via the *svm()* function with argument *kernel = "radial"*. The default value of $\gamma$ was utilized. A summary of the fit is shown below.
+
+```{r SVMR}
+svmfit.svmr <- svm(y ~ ., data = traindat, kernel = "radial", cost = 0.01, scale = TRUE)
+summary(svmfit.svmr)
+```
+
+The summary results indicate that a radial kernel was used with $cost = 0.01$. Also, 617 support vectors (i.e., observations) were utilized in the determination of the decision boundary, 306 being CH observations and 311 being MM observations.
+
+#### Support Vector Machine, Polynomial Kernel
+Classification using the support vector machine, i.e. assuming a non-linearly separable data set, was performed via the *svm()* function with argument *kernel = "polynomial"*. A 2nd degree polynomial kernel was specified with argument *degree = 2*. The default value of $\gamma$ was utilized. A summary of the fit is shown below.
+
+```{r SVMP}
+svmfit.svmp <- svm(y ~ ., data = traindat, kernel = "polynomial", cost = 0.01, degree = 2)
+summary(svmfit.svmp)
+```
+
+The summary results indicate that a radial kernel was used with $cost = 0.01$. Also, 621 support vectors (i.e., observations) were utilized in the determination of the decision boundary, 306 being CH observations and 315 being MM observations.
+
+#### Error Rates and Method Comparison
+
+For all methods, the cost parameter was optimized via the *tune()* function within the *e1071* package, which performs cross-validation. The available *cost* parameters from which the *tune()* function could select from were: $cost = \{0.01, 0.05, 0.1, 0.5, 1, 5, 10\}$. 
+
+Once the cost was optimized for each method, the training data was re-fit using the optimal cost value. Both training and testing data overall prediction error rates were calculated. Parameters of *x* ranging from 1 to 10 within the function *set.seed(x)* were utilized, which impacts the cross-validation process for tuning the cost parameter. Results are shown below as Table 1.  
+
+
+```{r Table 1: Error Matrix}
+#### Begin set.seed() loop.
+
+# error.matrix <- matrix(numeric(), nrow = 10, ncol = 6)
+# colnames(error.matrix) <- c("SVC Train", "SVC Test", "SVM (R) Train", 
+#                             "SVM (R) Test", "SVM (P) Train", "SVM (P) Test")
+# for(i in 1:10){
+#   set.seed(i)
+#   tune.out.svc <- tune(svm, y ~ ., data = traindat, kernel = "linear", 
+#                        ranges = list(cost = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10)))
+#   bestmod.svc <- tune.out.svc$best.model
+#   ypred.svc <- predict(bestmod.svc, testdat)
+#   test.table.svc <- table(predict = ypred.svc, truth = testdat$y)
+#   ypred2.svc <- predict(bestmod.svc, traindat)
+#   train.table.svc <- table(predict = ypred2.svc, truth = traindat$y)
+#   
+#   set.seed(i)
+#   tune.out.svmr <- tune(svm, y ~ ., data = traindat, kernel = "radial", 
+#                         ranges = list(cost = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10)))
+#   bestmod.svmr <- tune.out.svmr$best.model
+#   ypred.svmr <- predict(bestmod.svmr, testdat)
+#   test.table.svmr <- table(predict = ypred.svmr, truth = testdat$y)
+#   ypred2.svmr <- predict(bestmod.svmr, traindat)
+#   train.table.svmr <- table(predict = ypred2.svmr, truth = traindat$y)
+#   
+#   set.seed(i)
+#   tune.out.svmp <- tune(svm, y ~ ., data = traindat, kernel = "polynomial", 
+#                         degree = 2, ranges = 
+#                           list(cost = c(0.01, 0.05, 0.1, 0.5, 1, 5, 10)))
+#   bestmod.svmp <- tune.out.svmp$best.model
+#   ypred.svmp <- predict(bestmod.svmp, testdat)
+#   test.table.svmp <- table(predict = ypred.svmp, truth = testdat$y)
+#   ypred2.svmp <- predict(bestmod.svmp, traindat)
+#   train.table.svmp <- table(predict = ypred2.svmp, truth = traindat$y)
+#   
+#   error.matrix[i, 1] <- 1 - ((train.table.svc[1, 1] 
+#                               + train.table.svc[2, 2]) / 800)
+#   error.matrix[i, 2] <- 1 - ((test.table.svc[1, 1] 
+#                               + test.table.svc[2, 2]) / 270)
+#   error.matrix[i, 3] <- 1 - ((train.table.svmr[1, 1] 
+#                               + train.table.svmr[2, 2]) / 800)
+#   error.matrix[i, 4] <- 1 - ((test.table.svmr[1, 1] 
+#                               + test.table.svmr[2, 2]) / 270)
+#   error.matrix[i, 5] <- 1 - ((train.table.svmp[1, 1] 
+#                               + train.table.svmp[2, 2]) / 800)
+#   error.matrix[i, 6] <- 1 - ((test.table.svmp[1, 1] 
+#                               + test.table.svmp[2, 2]) / 270)
+# }
+# save(error.matrix, file = "error_matrix.Rda")
+load(file = "error_matrix.Rda")
+error.matrix <- round(error.matrix, 4)
+error.matrix <- cbind(as.character(1:10), error.matrix)
+colnames(error.matrix)[1] <- "x in set.seed(x)"
+error.matrix %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14, position = "center") %>% 
+  scroll_box(width = "100%", height = "160px")
+```
+  
+Table 1: Overall training and testing prediction error rates for all 3 methods under analysis. Error rates for 10 different *set.seed()* parameters were calculated.
+
+Inspection of Table 1 reveals that both the support vector classifier (SVC) and the SVM with radial kernel (SVM (R)) consistently outperformed the SVM with polynomial kernel (SVM (P)), suggesting that the flexibility of the polynomial kernel is inhibiting its performance for this particular data set. 
+
+Of the 2 higher-performing methods, SVC appears to be slightly more robust than SVM (R) in terms of their test error rates, though SVM (R) was capable of achieving the same optimal performance observed for SVC. This seems to suggest that a hyperplane which deviates only slightly from linearity may be an optimal fit for the data. Further investigation into the cost parameter for all classification methods may be warranted.
+
+## Appendix I: R Code
+
+All relevant code can be found above.
