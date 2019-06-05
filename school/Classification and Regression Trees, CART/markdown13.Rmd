@@ -1,0 +1,238 @@
+---
+title: "Data Analysis Report 13"
+author: "Will Kramlinger"
+date: "April 14, 2019"
+output: 
+  html_document:
+    code_folding: hide
+    toc: TRUE
+    toc_depth: 2
+    toc_float: TRUE
+    fig_caption: true
+    theme: spacelab
+---
+<style>
+body {
+text-align: justify}
+</style>
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+A data set comprising sales information for the Citrus Hill and Minute Maid brands of orange juice was analyzed. Classification trees were utilized to predictively model the binary response variable **Purchase**, which indicates which brand of orange juice was purchased. The success of prediction, as measured by test set error rates, was compared for unpruned and pruned trees, with sizes determined via cross-validation. The error rate variability due to different splits was also investigated.
+
+
+## Data
+The data set analyzed was the **OJ** data set found in the **ISLR** package in R. For a brief summary of the set and variable definitions, please refer to <https://rdrr.io/cran/ISLR/man/OJ.html>; the following shall presume the reader's familarity with the variable names and their meanings as they are used interchangeably. The set includes observations for 1070 purchases across 18 predictors. A check for missing values revealed no problems.
+
+Throughout all analyses, a fixed training set sample size of $n_{train} = 800$ was utilized, thus $n_{test} = 270$. This split was prescribed in the problem statement. Of note is that the same split was used for analysis with all methods, including when the effects of varying the cross-validation (CV) set.seed() parameter were investigated.
+
+```{r Setup, message = FALSE, warning = FALSE}
+rm(list = ls())
+library(ISLR)
+library(e1071)
+library(tree)
+library(kableExtra)
+options(digits = 4)
+## Basic EDA
+df <- OJ
+# cor(df2[, -c(1, 13)])
+# Categorical variables that need to be fixed include: StoreID (5 levels: 1:4, 7), Store (5 levels: 0:4).  These seem to be duplicate variables.
+# plot(df$StoreID ~ df$STORE)
+# Duplicate variables confirmed
+# Create dummy variables for Store.  Use Store = 0 as reference.
+df2 <- data.frame(df, store1 = numeric(1070), 
+                 store2 = numeric(1070), 
+                 store3 = numeric(1070), 
+                 store4 = numeric(1070))
+for(i in 1:1070) {
+  for(j in 1:4){
+    if(df2$STORE[i] == j){
+      df2[i, 18 + j] <- 1
+    }
+  }
+}
+rm(i, j)
+df2 <- df2[ , -c(3, 14, 18)]
+
+# Create train:test, where n_train = 800
+set.seed(1)
+indices <- sample(1:1070, size = 800)
+train <- df2[indices, ]
+test <- df2[-indices, ]
+
+```
+
+## Results and Discussion
+
+#### Exploratory Data Analysis (EDA)
+Exploratory data analysis was performed primarily via inspection of correlation and scatterplot matrices. However, via internet research by the experimenter, multicollinearity was deemed as rather unproblematic for tree classification, thus the high correlations between *DiscCH - PctDiscCH* and *DiscMM - PctDiscMM* were ignored. 
+
+However, it was determined that the categorical variables with multiple (five) levels within each, *StoreID* and *STORE*, were essentially the same variable. Thus, *StoreID* was removed from the dataset. The variable *STORE*, with original predictor levels of 0 to 4, was then recoded into 4 dummy variables: *store1*, *store2*, *store3*, and *store4*.  The meanings of these variables are assumed to be self-explanatory; *STORE* = 0 was thus taken as the reference level. Despite the previous discussion about multicollinearity, the elimination of *StoreID* was performed to avoid over-weighting the effects of the store at which the juice was purchased. Similarly, *Store7* was removed as a predictor due to its redundance with *StoreID*.
+
+#### Initial Classification Tree
+Classification using the support vector classifier was performed via the *tree()* function within the *tree* package. A summary of the fit is shown below.
+
+```{r Summary Initial tree.OJ}
+#### Begin classification tree
+tree.OJ <- tree(Purchase ~ ., train)
+summary(tree.OJ)
+```
+
+The summary results indicate that 4 variables were used in the tree construction, *LoyalCH*, *PriceDiff*, *SpecialCH*, and *ListPriceDiff*, which resulted in a tree with 8 terminal nodes. The misclassification error rate on the training set was 16.5%. The deviance is given by $-2 \Sigma_{m} \Sigma_{k} n_{mk} \log[\hat{p}_{mk}]$, where $n_{mk}$ is the number of observations in the $m^{th}$ terminal node belonging to the $k^{th}$ class.
+
+Inspection of the tree.OJ object, seen below, provides further details into the rules governing the classification tree. Each line represents a branch of the tree. For instance, considering the line "2) LoyalCH...", we gain insight to the split criterion (*LoyalCH* < 0.508643), the number of observations within the branch ($n = 350$), the deviance (400), the overall prediction for the branch (MM), and the fraction of observations in that branch that take on values of CH (0.27) and MM (0.73).
+
+```{r Initial tree.OJ}
+tree.OJ
+```
+
+A plot of the tree under analysis is shown below as Fig. 1. Given its position in the tree, the most important predictor appears to be *LoyalCH* by a significant margin. Of note is the "redundancy" of a few of the splits, such as "*ListPriceDiff* < 0.235", which contains branches that do not lead to different classifications.
+
+```{r Plot Initial tree.OJ}
+par(mfrow = c(1, 1))
+plot(tree.OJ)
+text(tree.OJ, pretty = 0)
+```
+  
+Fig. 1: Classification tree for *Purchase*, generated using the training data set.
+
+A confusion matrix for the tree was generated, and is shown as Table 1. The overall test error rate can be calculated as  
+<center>
+$(1 - \frac{147 + 62}{270}) \times 100\%= 22.6\%$
+</center>
+```{r Initial confusion}
+tree.pred1 <- predict(tree.OJ, test, type = "class")
+table(tree.pred1, test[ , "Purchase"]) %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14, position = "center") %>% 
+  scroll_box(width = "100%", height = "120px")
+```
+  
+Table 1: Confusion matrix for classification tree prediction on test set.
+
+
+#### Optimal tree size via cross-validation
+
+To select the optimal tree size, the *cv.tree()* function was utilized from the *tree* package. From the text:
+
+<center>
+*We use the argument FUN = prune.misclass in order to indicate that we want the classification error rate to guide the CV and pruning process, rather than the default for the cv.tree() function, which is deviance. The cv.tree() function reports the number of terminal nodes of each tree considered (size) as well as the corresponding error rate and the value of the cost-complexity parameter used (k, which corresponds to alpha in 8.4)*  
+  
+  
+</center>
+  
+  
+A plot of deviance vs. tree size is shown as Fig. 2. The minimum deviance is achieved by two different tree sizes: 5 and 8. After inspection of trees of both sizes, an optimal tree size of 5 was chosen as this generated a pruned tree.
+
+```{r CV}
+set.seed(1)
+cv.OJ <- cv.tree(tree.OJ, FUN = prune.misclass)
+# names(cv.OJ)
+# cv.OJ
+par(mfrow = c(1, 1))
+plot(cv.OJ$size, cv.OJ$dev, type = "b", xlab = "Tree Size", ylab = "Deviance")
+```
+  
+Fig. 2: Dependence of deviance on tree size as determined via cross-validation. The optimal tree size is that which minimizes the deviance. In this instance, two sizes satisfy this constrain: 5 and 8 terminal nodes.
+
+#### Pruned tree
+
+A pruned tree, shown as Fig. 3, was generated using the previously determined optimal size of 5. Upon comparison with the unpruned tree from Fig. 1, the pruned tree lacks the "redundant" branches though the remaining split criteria remain unaltered.
+
+```{r Pruned}
+prune.OJ <- prune.misclass(tree.OJ, best = 5)
+plot(prune.OJ)
+text(prune.OJ, pretty = 0)
+```
+  
+Fig. 3: Pruned classification tree for *Purchase*, generated using the training data set. 
+
+A confusion matrix for the tree was generated, and is shown as Table 2. The overall test error rate can be calculated as  
+<center>
+$(1 - \frac{147 + 62}{270}) \times 100\%= 22.6\%$,
+</center>
+
+which is identical to that found from the unpruned tree. Given these equal error rates between the pruned and unpruned versions, the former would be greatly preferable due to its simplicity and better interpretability. 
+```{r Pruned confusion}
+tree.pred2 <- predict(prune.OJ, test, type = "class")
+table(tree.pred2, test[ , "Purchase"]) %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14, position = "center") %>% 
+  scroll_box(width = "100%", height = "120px")
+```
+Table 2: Confusion matrix for pruned classification tree prediction on test set.
+
+#### Error Rates and Method Comparison
+
+The effects of various train-test splits on the error rates of the unpruned and pruned trees were investigated. 50 different splits were generated by modifying *x* (from 1 to 50) within the *set.seed(x)* parameter before the *sample()* function was used. Plots of the test and traning error rates vs. x, for both the unpruned and pruned trees, are shown as Fig. 4. 
+
+Generally speaking, the unpruned versions performed better on both the training and data sets. On the test data sets, the pruned tree performed better 7 times, the unpruned tree performed better 16 times, and the error rates were equal in the remaining 27 observations. On the training data sets, the pruned tree performed better 1 time, the unpruned tree performed better 25 times, and the error rates were equal in the remaining 24 observations.
+
+Given the results seen in Fig. 4, it seems it would be prudent to investigate both unpruned and pruned trees in most situations, unless interpretability is a major concern, in which case, the pruned tree presents obvious advantages.
+
+```{r Split Tweak, message = FALSE, warning = FALSE}
+#### Begin split testing
+error.matrix <- matrix(numeric(), nrow = 50, ncol = 4)
+colnames(error.matrix) <- c("Unpruned Test Error Rate", "Unpruned Train Error Rate", "Pruned Test Error Rate", "Pruned Train Error Rate")
+for(i in 1:50){
+  # Create train:test, where n_train = 800
+  set.seed(i)
+  indices <- sample(1:1070, size = 800)
+  train <- df2[indices, ]
+  test <- df2[-indices, ]
+  
+  #### Begin classification tree
+  tree.OJ <- tree(Purchase ~ ., train)
+  tree.pred1 <- predict(tree.OJ, test, type = "class")
+  rate1 <- table(tree.pred1, test[ , "Purchase"])
+  error.matrix[i , 1] <- 1 - ((rate1[1, 1] + rate1[2, 2]) / 270)
+  
+  tree.OJ <- tree(Purchase ~ ., train)
+  tree.pred2 <- predict(tree.OJ, train, type = "class")
+  rate2 <- table(tree.pred2, train[ , "Purchase"])
+  error.matrix[i , 2] <- 1 - ((rate2[1, 1] + rate2[2, 2]) / 800)
+  
+  set.seed(1)
+  cv.OJ <- cv.tree(tree.OJ, FUN = prune.misclass)
+  
+  prune.OJ <- prune.misclass(tree.OJ, 
+                             best = cv.OJ$size[which(cv.OJ$dev 
+                                                     == min(cv.OJ$dev))])
+  tree.pred3 <- predict(prune.OJ, test, type = "class")
+  rate3 <- table(tree.pred3, test[ , "Purchase"])
+  error.matrix[i , 3] <- 1 - ((rate3[1, 1] + rate3[2, 2]) / 270)
+  
+  prune.OJ <- prune.misclass(tree.OJ, best = cv.OJ$size[which(cv.OJ$dev 
+                                                              == min(cv.OJ$dev))])
+  tree.pred4 <- predict(prune.OJ, train, type = "class")
+  rate4 <- table(tree.pred4, train[ , "Purchase"])
+  error.matrix[i , 4] <- 1 - ((rate4[1, 1] + rate4[2, 2]) / 800)
+}
+
+# Graph error rates
+par(mfrow = c(1, 2))
+plot(error.matrix[ , 1], type = "l", col = "red", 
+     xlab = "x in set.seed(x) for Split",
+     ylab = "Test Error Rate")
+lines(error.matrix[ , 3], col = "blue")
+
+plot(error.matrix[ , 2], type = "l", col = "red", 
+     xlab = "x in set.seed(x) for Split",
+     ylab = "Training Error Rate")
+lines(error.matrix[ , 4], col = "blue")
+legend("topright",
+       legend = c("Unpruned", "Pruned"),
+       col = c("red", "blue"),
+       pch = c("l", "l")
+)
+```
+
+Fig. 4: Test (left) and training (right) error rates vs. $x$ in the *set.seed(x)* paramater used to generate the train-test splits.
+
+## Appendix I: R Code
+
+All relevant code can be found above.
