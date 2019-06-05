@@ -3,4 +3,4 @@ Data analysis report written as an assignment for STAT 508 Applied Data Mining a
 
 RMarkdown code found within .Rmd file, viewable via text editor.
 
-Report contained in .html file, viewable via: https://htmlpreview.github.io/?https://github.com/kram0275/public/blob/master/school/Data%20Analysis%20Report%2012.html
+Report contained in .html file, viewable via: https://htmlpreview.github.io/?https://github.com/kram0275/public/blob/master/school/Support%20Vector%20Machines%20(SVM)/Data%20Analysis%20Report%2012.html
