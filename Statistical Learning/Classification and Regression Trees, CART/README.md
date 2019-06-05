@@ -1,4 +1,4 @@
-# public/school/Classification and Regression Trees, CART
+# public/Statistical Learning/Classification and Regression Trees, CART
 
 Report: https://kram0275.github.io/public/markdown13.html
 

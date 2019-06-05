@@ -1,4 +1,4 @@
-# public/school/k-Nearest Neighbors, kNN
+# public/Statistical Learning/k-Nearest Neighbors, kNN
 
 Report: https://kram0275.github.io/public/markdown10.html
 

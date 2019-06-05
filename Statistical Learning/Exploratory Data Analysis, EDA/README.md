@@ -1,6 +1,6 @@
-# public/school/Dimension Reduction - Principal Components Regression and Partial Least Squares, PCR, PLS
+# public/Statistical Learning/Exploratory Data Analysis, EDA
 
-Report: https://kram0275.github.io/public/markdown5.html
+Report: https://kram0275.github.io/public/markdown1.html
 
 RMarkdown code found in .Rmd file.
 

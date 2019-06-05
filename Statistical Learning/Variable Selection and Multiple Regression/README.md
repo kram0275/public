@@ -1,4 +1,4 @@
-# public/school/Variable Selection and Multiple Regression
+# public/Statistical Learning/Variable Selection and Multiple Regression
 
 Report: https://kram0275.github.io/public/markdown2.html
 

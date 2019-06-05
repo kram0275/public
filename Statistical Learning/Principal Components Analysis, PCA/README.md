@@ -1,4 +1,4 @@
-# public/school/Principal Components Analysis, PCA
+# public/Statistical Learning/Principal Components Analysis, PCA
 
 Report: https://kram0275.github.io/public/markdown7.html
 

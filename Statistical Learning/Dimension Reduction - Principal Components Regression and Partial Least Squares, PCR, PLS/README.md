@@ -1,6 +1,6 @@
-# public/school/Logistic Regression, Linear and Quadratic Discriminant Analysis, LDA, QDA
+# public/Statistical Learning/Dimension Reduction - Principal Components Regression and Partial Least Squares, PCR, PLS
 
-Report: https://kram0275.github.io/public/markdown9.html
+Report: https://kram0275.github.io/public/markdown5.html
 
 RMarkdown code found in .Rmd file.
 

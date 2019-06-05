@@ -1,4 +1,4 @@
-# public/school/Best Subsets, Ridge and Lasso, PCR, PLS
+# public/Statistical Learning/Best Subsets, Ridge and Lasso, PCR, PLS
 
 Report: https://kram0275.github.io/public/markdown6.html
 
