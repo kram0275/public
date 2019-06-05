@@ -1,0 +1,256 @@
+---
+title: "Data Analysis Report 10"
+author: "Will Kramlinger"
+date: "March 24, 2019"
+output: 
+  html_document:
+    code_folding: hide
+    toc: TRUE
+    toc_depth: 2
+    toc_float: TRUE
+    fig_caption: true
+    theme: spacelab
+---
+<style>
+body {
+text-align: justify}
+</style>
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+A prior analysis was conducted which included exploratory data analysis (EDA) and usage of 3 classification techniques (logistic regression, linear discriminant analysis (LDA), and quadratic discriminant analysis (QDA)) on a data set comprising weekly percentage returns for the S&P 500 stock index between 1990 and 2010. The models utilized the binary variable **Direction** as the response, which indicates whether the market had a positive or negative return on a given week. 
+
+Given the prescribed lone predictor of **Lag2** and train-test split of *train* = $\{Year \leq 2008\}$, else *test*, logistic regression and LDA provided identical test success rates of 62.5%, followed by QDA which provided an overall success rate of 58.7%.
+
+The following analysis is a continuation of this previous study, but which instead utilized the k-nearest neighbors (KNN) approach. The success of all aformentioned classification techniques, measured by test set prediction success rates, were compared and contrasted.
+
+## Data
+The data set analyzed was the **Weekly** data set included in the R package 
+**ISLR**.  The set includes observations for 1089 weeks across 9 variables. 
+For variable definitions, please refer to <https://rdrr.io/cran/ISLR/man/Weekly.html>. 
+The following shall presume the reader's familarity with the variable names and
+their meanings, as they are used interchangeably.  A check for missing data 
+within the set revealed no problems and no cleaning was deemed necessary. To 
+avoid ambiguity, the response **Direction** was re-coded numerically, where 
+weeks of the level "Up" were coded as 1, and weeks of the level "Down" were 
+coded as 0. 
+
+A simple 5-number summary for each variable, along with each mean, was calculated as Table 1.
+
+```{r Table 1: Summary, message = FALSE}
+rm(list = ls())
+library(ISLR)
+library(MASS)
+library(bestglm)
+library(knitr)
+library(kableExtra)
+options(digits = 3)
+df <- Weekly
+df$numDirection <- numeric(length(df[ , 1]))
+df$numDirection[df$Direction == "Up"] <- 1
+df <- df[ , -9]
+colnames(df)[9] <- "Direction"
+
+df.summ <- summary(df)
+colnames(df.summ) <- gsub(" ", "", colnames(df.summ), fixed = TRUE)
+df.summ %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "100%", height = "110px")
+```
+Table 1: 5-number summary for all variables in **Weekly** data set.
+
+## Results and Discussion
+
+#### K-Nearest Neighbors (KNN) with k = 1
+The K-nearest neighbors technique was performed on the training data using **Direction** as the response and **Lag2** as the predictors using the *knn()* function within the R package **class**. The initial attempt utilized the prescribed train-test split as described in the introduction, with $k = 1$. The confusion matrix for this model was generated and is shown below as Table 2.
+
+<center>
+```{r Table 2: k equals 1, message = FALSE}
+rm(list = ls())
+library(ISLR)
+library(class)
+df <- Weekly
+df$numDirection <- numeric(length(df[ , 1]))
+df$numDirection[df$Direction == "Up"] <- 1
+df <- df[ , -9]
+colnames(df)[9] <- "Direction"
+df$logVol <- log(df$Volume)
+
+train <- (df$Year <= 2008)
+df.train <- df[train, ]
+df.test <- df[!train, ]
+Direction.train <- df$Direction[train]
+Direction.test <- df$Direction[!train]
+
+set.seed(1)
+knn.pred <- knn(as.matrix(df.train$Lag2), as.matrix(df.test$Lag2), 
+                Direction.train, k = 1)
+conf.matrix <- table(knn.pred, Direction.test)
+# (21 + 31) / 104
+# Confusion matrix with k = 1 gives an overall accuracy rate of 50%.  Worst seen of all methods.
+
+conf.matrix %>%
+  kable(align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "25%", height = "110px")
+```
+</center>
+Table 2: Confusion matrix for KNN applied using **Lag2** as predictor with $k = 1$. The overall prediction success rate is 50%. 
+
+From Table 2, the overall correct prediction rate can be calculated as  
+
+<center>
+$PctCorrect = \frac{(21 + 31)}{104} \times 100\% = 50.0\%$,  
+
+</center>
+which is equivalent to random chance, and is the worst rate observed for all previously examined classification methods; a summary of these results is shown as Table 3.  It should be noted that the *knn()* function performs a standardization of the variables by default, as is strongly suggested when using the KNN method. Also of note is that a parameter of *set.seed(1)* was utilized for this initial analysis. For the purposes of KNN, this parameter defines rules for tie-breakers. This parameter is more fully investigated below.
+
+<center>
+```{r Table 3: Summary}
+summ <- matrix(c(62.5, 62.5, 58.7, 50.0), ncol = 1)
+row.names(summ) <- c("LDA", "Logistic Regression", "QDA", "KNN")
+colnames(summ) <- c("Overall Prediction Success Rate (%)")
+summ %>%
+  kable(align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "50%", height = "110px")
+```
+</center>
+Table 3: Summary of classification techniques and overall prediction success rates for prescribed test:train splits, probability thresholds, and $k = 1$ on **Weekly** data set.
+
+
+#### Examination of k, "set.seed()"
+
+Using the *set.seed(1)* parameter, the effects of $k$ on the prediction success rate of KNN was examined. A plot of the overall prediction success rate vs. $k$ is shown below as Fig. 1. The overall success rate increases with increasing $k$ as expected. However, none of the observations produced a rate higher than the 62.5% achieved with LDA and logistic regression.
+
+<center>
+```{r Fig. 1: K Optimization}
+predict.rate <- numeric(length = 30)
+conf.list <- list()
+for(i in 1:30) {
+  set.seed(1)
+  knn.pred <- knn(as.matrix(df.train$Lag2), as.matrix(df.test$Lag2), 
+                  Direction.train, k = i)
+  conf.matrix <- table(knn.pred, Direction.test)
+  conf.list[[i]] <- conf.matrix
+  predict.rate[i] <- (conf.matrix[1, 1] + conf.matrix[2, 2]) / 104
+}
+# conf.list
+# predict.rate
+plot(predict.rate, xlab = "k", ylab = "Overall Prediction Success Rate",
+     main = "Dependence of KNN Success Rate on k")
+```
+</center>
+  
+Fig. 1: Overall prediction success rate of KNN vs. k using *set.seed(1)*. 
+
+The effect on the prediction success rates caused by modification of $x$ in the parameter *set.seed(x)* was investigated. Using a range of $x = {1, ..., 50}$, the overall prediction success rates for $k = 1, ..., 50$ were calculated; the frequency of which values of $k$ produced optimal success rates are shown as a histogram in Fig. 3. Note that for some values of $x$, multiple values of $k$ produced the same maximum prediction success rates, i.e., the frequencies do not add up to $n_{test} = 104$. 
+
+<center>
+```{r Fig. 2: Set.Seed Exploration}
+predict.rate <- numeric(length = 20)
+conf.list <- list()
+best.k.list <- list()
+predict.list <- list()
+for(j in 1:50) {
+  for(i in 1:20){
+    set.seed(j)
+    knn.pred <- knn(as.matrix(df.train$Lag2), as.matrix(df.test$Lag2), 
+                    Direction.train, k = i)
+    conf.matrix <- table(knn.pred, Direction.test)
+    conf.list[[i]] <- conf.matrix
+    predict.rate[i] <- (conf.matrix[1, 1] + conf.matrix[2, 2]) / 104
+  }
+  best.k.list[[j]] <- which(predict.rate == max(predict.rate))
+  predict.list[[j]] <- predict.rate
+}
+# best.k.list
+best.k.table <- tabulate(unlist(best.k.list))
+
+best.k.vector <- list()
+for(i in 1:20){
+  best.k.vector[[i]] <- rep(i, best.k.table[i])
+}
+hist(unlist(best.k.vector), xlab = "k", 
+     main = "Frequency of k Producing Optimal Prediction Rate for set.seed(1:50)")
+
+#### Programmer is not very good with lists yet ####
+```
+</center>
+Fig. 2: Histogram displaying the frequencies for which $k$ produced the optimal prediction success rate for a given set.seed(x) parameter, $x = 1,...,50$.
+
+The prediction rates found to produce Fig. 2 were collected and sorted. One instance of the best success rate of 63.74% was found to correspond to $k = 4$, *set.seed(8)*. The associated confusion matrix for KNN using these parameters is found as Table 4.
+
+<center>
+```{r Table 4: Best KNN}
+# m <- 1:450
+# predict.vector <- unlist(predict.list)
+# best.10 <- sort(unlist(predict.list), decreasing = TRUE)[1:10]
+# which(predict.vector == best.10[1]) # Returns 67 ==> x = 8, k = 4
+# mean(predict.vector) # Returns 54.47
+# range(predict.vector) # Returns 43.27, 63.46
+# hist(predict.vector, xlab = "Overall Prediction Rate")
+# hist(predict.vector[m %% 9 == 4], xlab = "Overall Prediction Rate")
+
+set.seed(8)
+knn.pred <- knn(as.matrix(df.train$Lag2), as.matrix(df.test$Lag2), 
+                Direction.train, k = 4)
+conf.matrix <- table(knn.pred, Direction.test)
+conf.matrix %>%
+  kable(align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "25%", height = "110px")
+
+```
+</center>
+Table 4: Confusion matrix for KNN applied using **Lag2** as predictor with $k = 4$, *set.seed(8)*. The overall prediction success rate is 63.74%, which was found to be the best success rate for all combinations of $k$ and *set.seed(x)*, for $k = \{1, ..., 9\}; x = \{1, ..., 50\}$. 
+
+Of note is that this specific combination of $x, k$ was the only observation where the overall prediction success rate exceeded 62.5%, which was the rate achieved with logistic regression and LDA in the previous analysis (though 2 other KNN cases matched this exact rate). While some detractors may point to the generally lower success rate of KNN as compared to the methods previously examined, the higher degree of interpretability and explainability of the KNN method, as compared to the others, should not be dismissed. In this regard, it is perhaps notable that KNN managed to outperform the other methods, even though in only one very specific instance.
+
+#### Other Predictor Combinations, Transformations
+
+Based on EDA conducted in the previous analyses, the effects on the KNN prediction success rate for a few combinations and subsets of the predictors **Lag1**, **Lag2**, **Volume**, and log(**Volume**) were investigated. None of the examined combinations or transformations of variables led to a general improvement of performance.
+
+```{r Transforms, results = "hide", message = FALSE}
+#### Variable Transforms
+# User manipulation of columns used in the knn() function allows investigation
+# of predictor combinations
+df$logVol <- log(df$Volume) # Add a logVolume variable
+train <- (df$Year <= 2008)
+df.train <- df[train, ]
+df.test <- df[!train, ]
+
+Direction.train <- df$Direction[train]
+Direction.test <- df$Direction[!train]
+predict.rate <- numeric(length = 9)
+conf.list <- list()
+for(i in 1:20) {
+  set.seed(1)
+  knn.pred <- knn(as.matrix(df.train[ , c(3, 10)]), as.matrix(df.test[ , c(3, 10)]), 
+                  Direction.train, k = i)
+  conf.matrix <- table(knn.pred, Direction.test)
+  conf.list[[i]] <- conf.matrix
+  predict.rate[i] <- (conf.matrix[1, 1] + conf.matrix[2, 2]) / 104
+}
+# conf.list
+predict.rate
+which(predict.rate == max(predict.rate))
+# plot(predict.rate, xlab = "k", ylab = "Overall Prediction Success Rate",
+#      main = "Dependence of KNN Success Rate on k")
+#### End Variable Transforms
+```
+
+
+## Conclusions
+
+As a continuation of previous analyses, KNN was performed on the **Weekly** data set using **Lag2** as a predictor. The overall prediction success rate was measured for various values of k, which generated wide variations in performance. However, a few instances of KNN outperforming LDA and logistic regression were observed. The simplicity and power of the KNN method was generally confirmed.
+
+## Appendix I: R Code
+All relevant can be found above.

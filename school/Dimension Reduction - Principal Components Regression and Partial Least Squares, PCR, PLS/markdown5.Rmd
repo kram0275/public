@@ -1,0 +1,448 @@
+---
+title: "Data Analysis Report 5"
+author: "Will Kramlinger"
+date: "Feb. 10, 2019"
+output: 
+  html_document:
+    code_folding: hide
+    toc: TRUE
+    toc_depth: 3
+    toc_float: TRUE
+    fig_caption: true
+    theme: spacelab
+---
+<style>
+body {
+text-align: justify}
+</style>
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Introduction
+Exploratory data analysis (EDA) was conducted on a data set comprising per capita crime rates (**crim**) of various Boston suburbs and potential predictors in order to gauge the necessity of data cleansing before model fitting via various regression techniques. Earlier analyses compared the efficacy of best subsets and coefficient shrinkage methods. Dimension reduction techniques (principal components regression (PCR), partial least squares (PLS)) were investigated. Models were evaluated based on a criterion of test MSE minimization using 10-fold cross-validation (CV).
+
+## Data
+The data set analyzed was the **Boston** data set included in the R package 
+**MASS**.  The set includes observations for 506 suburbs across 14 variables. 
+For variable definitions, please refer to  <https://www.rdocumentation.org/packages/MASS/versions/7.3-47/topics/Boston>. 
+The following shall presume the reader's familarity with the variable names and
+their meanings, as they are used interchangeably.  A check for missing data 
+within the set revealed no problems and no removal of influential points was deemed necessary.  
+
+## Analyses
+
+#### Exploratory Data Analysis
+
+Initial EDA was performed in a previous report, which comprised examination of each variable's distribution, as well as inspection of scatterplot and correlation matrices. No unduly influential points were discovered in this analysis. However, based on a criterion of *$r > 0.9 \Rightarrow$ collinearity* mentioned in a previous week's discussion, one predictor pair was found to have troublesome collinearity: **rad - tax**. While neither of these variables were directly removed from consideration, this observation guided eventual model selection which is discussed below.  A histogram of the response variable **crim** was found to be heavily skewed to the right, which suggested a variable transformation may be needed.
+
+#### Variable Transformation
+
+An initial linear model was generated, which comprised **crim** regressed on all 13 predictors. This model provided a relatively poor fit, giving $\hat\sigma = 6.439, R^2_a = 0.4396$; these numbers were used as benchmarks for subsequent model evaluation. Inspection of the residual plots revealed severe violations of the linearity, equal variances, and normality assumptions; these plots are shown as Fig. 1.
+
+In response to these problems, three transformations on the response were examined: reciprocal, logarithmic, and power (via Box-Cox).  The reciprocal transformation did little to improve fit nor fix the assumption violations.  However, both of the logarithmic and power transformations yielded great improvements in both fit and assumption satisfaction. Ultimately, the power transformation was chosen due to its slight advantage in fit ($R_a^2 = 0.8751, 0.8721$ for power and log transforms, respectively). 
+
+Using the *boxCox()* function within the **car** package, the optimal $\lambda$ was found to be $0.\bar{02}$, which was simplified to $\lambda = 0.02$; a plot of log-likelihood vs. $\lambda$ is shown as Fig. 2. **The new response variable used for subsequent model fitting was thus $crim^{0.02}$.** The residual plots for the Box-Cox transformed model are shown as Fig. 3.
+
+After the improvements were observed due to the response transformation, transformations on the predictor variables were not considered to maintain some semblance of model interpretability.
+
+#### Principal Components Regression (PCR)
+
+Using the transformed response and all 13 of the initial candidate predictor variables, PCR was conducted using the *pcr()* function within the **pls** package according to the steps outlined in the textbook. By default, the function standardizes all predictor levels and conducts 10-fold cross-validation (CV) for each possible value of $M$ components. **Based on a criterion of prediction error minimization, the optimal number of components for PCR was found to be $M = 13$, i.e., inclusion of all predictors or the OLS model.** The test MSE for this method was found to be $MSE = 2.63067\cdot 10^{-4}$.
+
+The model suggested by PCR was generated and its regression output was examined. The variance inflation factors (VIFs) for **rad** and **tax** were found to be quite high: 7.16 and 9.20, respectively, corresponding to the previous discussion regarding their collinearity. The effects of each variable's removal, as well as both variables' removal, were examined. It should be noted that the removal of **tax** was found to both remove the troublesome collinearity and also decreased the residual standard error (as compared to the 13-predictor model) when the entire data set was fit. However, re-running PCR without **tax** seemed to be poor statistical practice to the experimenter; after initial PCR results suggested the full 13-predictor OLS model, a different regression approach should likely be utilized.
+
+#### Partial Least Squares (PLS)
+
+PLS was conducted using the *plsr()* function within the **pls** package according to the steps outlined in the textbook. The function also performs the predictor standardization and CV steps, as mentioned for PCR. **Based on a criterion of prediction error minimization, the optimal number of components for PLS was found to be $M = 11$**. While $M = 12, 13$ gave equivalent prediction errors out to 4 decimal places; $M = 11$ was chosen as to minimize the number of predictors.   The test MSE found via PLS was found to be $MSE = 2.62985\cdot 10^{-4}$, which was a bit lower than that found for PCR.
+
+#### Discussion
+
+While the minimum prediction errors between PCR and PLS did not greatly differ, of note is that PLS was ultimately able to achieve a smaller test MSE using a smaller number of components. This difference in performance is not wholly unexpected, as PLS utilizes information from the response variable in its identification of principal components, while PCR does not.
+
+Both PCA techniques performed better than ridge ($MSE = 2.69814\cdot 10^{-4}$) and lasso ($MSE = 3.93546\cdot 10^{-4}$) regression, but worse than best subsets regression ($MSE = 2.32094 \cdot 10^{-4}$); a results summary for all methods is found as Table 1. This may be attributable to the advantage of best subsets regression in throwing out irrelevant information with respect to a criterion. On the other hand, PCA does not throw out irrelevant data but instead creates an artificial copy of the original information, which may involve some information loss.
+
+Throughout the comparison of best subsets, shrinkage, and PCA techniques, and by employing 10-fold cross-validation, the best model was found to be a 9-predictor model selected via best subsets regression:
+
+<center>
+$crim^{0.02} = 0.9204 - 2.224\cdot10^{-4}(zn) + 3.783\cdot10^{-4}(indus) + 7.566\cdot10^{-2}(nox) + 1.140\cdot10^{-4}(age)$ 
+$+ 2.842\cdot10^{-3}(rad) - 8.202\cdot10^{-4}(ptratio) - 2.974\cdot10^{-5}(black)$ 
+$+ 6.735\cdot10^{-4}(lstat) + 1.613\cdot10^{-4}(medv)$
+  
+</center>
+  
+Of note in this model is the absence of the variable **tax**, which was previously discussed as being strongly correlated with **rad**; the observation points to the ability of best subsets to weed out redundant information. The regression output for this model is found as Table 2.
+
+## Plots and Tables
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+## Clear variables and load data set
+rm(list = ls())
+library(MASS) # Has Boston data set
+library(car) # Has VIF
+library(glmnet) # For ridge regression
+library(nortest) # Has Anderson-Darling
+library(olsrr) # Has Breusch-Pagan
+library(leaps)
+library(glmnet) # For Lasso, Ridge
+library(pls) # For PCA
+df <- Boston
+```
+
+```{r full.model, results = "hide", fig.align = "center"}
+full.model <- lm(df$crim ~ ., data = df)
+summary(full.model) 
+# *** = dis, rad; ** = medv; * = inter, zn, black; . = rm, lstat
+# Benchmark numbers: SE(res) = 6.439, Mult R^2 = 45.4, Adj R^2 = 43.96
+# qqnorm(full.model$residuals)
+# plot(studres(full.model) ~ full.model$fitted.values)
+# Seemingly a healthy amount of outliers.  Linearity and equal variances 
+# assumptions are also in doubt
+vif(full.model) # rad and tax show high VIFs (7.16, 9.20) 
+cor(df$rad, df$tax) # Returns 0.9102
+# par(mfrow = c(1, 1))
+# plot(df$rad ~ df$tax, cex = 0.5)
+
+# Generate 4-in-1 residuals plot for full.model
+par(mfrow = c(2, 2))
+qqnorm(full.model$residuals, main = "Normal Probability Plot of Residuals",
+       cex = 0.3)
+qqline(full.model$residuals)
+plot(fitted(full.model), rstudent(full.model), xlab = "Fitted Values",
+     ylab = "Studentized Residuals", 
+     main = "Studentized Residuals vs. Fitted Values", cex = 0.3)
+abline(h = 0)
+hist(full.model$residuals, xlab = "Raw Residuals", 
+     main = "Histogram of the Residuals")
+plot(full.model$residuals ~ seq(1:506), xlab = "Order", ylab = "Raw Residuals", 
+     main = "Raw Residuals vs. Order", cex = 0.2)
+lines(full.model$residuals ~ seq(1:506))
+```
+  
+Fig. 1: Residual plots for **crim** regressed on all 13 predictors. The probability plot suggests strong violation of the normality assumption, while the residuals vs. fits plot suggests strong violations of the linearity and equal variances assumptions.
+
+
+```{r boxCox, results = "hide", fig.height = 4, fig.width = 6, fig.align = "center"}
+par(mfrow = c(1, 1))
+box.full <- boxCox(full.model)
+box.full
+```
+
+Fig. 2: Log-likelihood vs $\lambda$ for Box-Cox transformation of $crim$ to $crim^{\lambda}$. Plot and analysis suggested an optimal value of $\lambda = 0.02$.
+
+```{r box.full.model, results = "hide", fig.align = "center"}
+# Try Box-cox on full.model
+
+which(box.full$y == max(box.full$y)) # 51
+box.full$x[51] # Returns lambda = 0.02 as suggested power transform
+box.full.model <- lm(df$crim^(0.02) ~ ., data = df)
+summary(box.full.model) # SE(res) = 0.01519, Mult R^2 = 87.84, Adj R^2 = 87.51
+# Box = 0.02 suggests chas, rm, dis, tax, and medv are not significant
+vif(box.full.model) # High for rad, tax
+# due to the insignificance of rad in box.full.model and the high VIF, remove 
+# rad or taxfor next model
+# Generate 4-in-1 residuals plot for box.full.model
+par(mfrow = c(2, 2))
+qqnorm(box.full.model$residuals, main = "Normal Probability Plot of Residuals",
+       cex = 0.3)
+qqline(box.full.model$residuals)
+plot(fitted(box.full.model), rstudent(box.full.model), xlab = "Fitted Values",
+     ylab = "Studentized Residuals", 
+     main = "Studentized Residuals vs. Fitted Values", cex = 0.3)
+abline(h = 0)
+hist(box.full.model$residuals, xlab = "Raw Residuals", 
+     main = "Histogram of the Residuals")
+plot(box.full.model$residuals ~ seq(1:506), xlab = "Order", ylab = "Raw Residuals", 
+     main = "Raw Residuals vs. Order", cex = 0.2)
+lines(box.full.model$residuals ~ seq(1:506))
+ad.test(box.full.model$residuals) # Failed, but OK via discussion board
+```
+
+Fig. 3: Residual plots for $crim^{0.02}$ regressed on all 13 predictors. The plots suggest drastic improvements towards meeting linear regression assumptions, as compared to those in Fig. 1.
+  
+  
+```{r summ.table, message = FALSE}
+library(kableExtra)
+library(knitr)
+summ.table <- matrix(nrow = 5, ncol = 3)
+colnames(summ.table) <- c("Method", "Test MSE", "Description")
+summ.methods <- c("Best Subsets", "Ridge", "Lasso", "PCR", "PLS")
+summ.mse <- c(0.000232094, 0.0002698135, 0.0003935462, 0.0002630673, 0.000262985)
+summ.desc <- c("9 predictors", "13 predictors", "6 predictors", "13 components", "11 components")
+summ.table[ , 1] <- summ.methods
+summ.table[ , 2] <- summ.mse
+summ.table[ , 3] <- summ.desc
+rm(summ.methods, summ.mse, summ.desc)
+summ.table %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14, position = "center") %>% 
+  scroll_box(width = "100%", height = "210px")
+```
+Table 1: Summary of regression methods utilized and test MSE values achieved via 10-fold cross-validation.
+  
+```{r best.sub.model, message = FALSE}
+best.sub.model <- lm(crim^(0.02) ~ zn + indus + nox + age + rad + ptratio + black +
+                       lstat + medv, data = df)
+load("tabler_lm.Rda")
+table1 <- tabler.lm(best.sub.model)
+table1 %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14, position = "center") %>% 
+  scroll_box(width = "100%", height = "250px")
+```
+  
+Table 2: Regression output for 9-predictor model selected via best subsets.
+
+## Conclusions
+
+As a continuation of previous analyses comprising EDA, best subsets, and regression shrinkage techniques, PCA was applied on the Boston data set using the variable **crim** as the response. Based on the results of EDA and initial modeling, the response was transformed via Box-Cox with parameter $\lambda = 0.02$. PCR suggested a 13-component model which was no different than the full least-squares model, while PLS suggested a 11-component model; the PLS model provided a slightly lower test error than that of PCR. Test errors derived from 10-fold cross validation were compared for all methods. In order of lowest (best) to highest (worst) errors, the methods ranked as follows: best subsets, PLS, PCR, ridge, and lasso. Based on analyses performed by peers, this order may be a strong function of the decisions made to transform (or not transform) the response variable.
+
+## Appendix I: R Code
+
+The following code supplements that found above and has not been edited for cleanliness.
+
+```{r message = FALSE, warning = FALSE, results = "hide"}
+cor(df)
+
+# Check observations vs. fits for full.model
+par(mfrow = c(1, 1))
+plot(df$crim ~ full.model$fitted.values)
+abline(a = 0, b = 1)
+
+# Examine each SLR
+slr.stats <- matrix(numeric(), nrow = 26, ncol = 4)
+colnames(slr.stats) <- colnames(summary(full.model)$coefficients)
+for (i in 1:13) {
+  temp.model <- lm(df$crim ~ df[ , i] )
+  slr.stats[(2*i - 1), ] <- summary(temp.model)$coefficients[1, ]
+  slr.stats[2*i, ] <- summary(temp.model)$coefficients[2, ]
+  rm(temp.model) # Clean up temp.model
+}
+slr.stats <- as.data.frame(slr.stats)
+row.names(slr.stats)[2*(1:13) - 1] <- paste0(colnames(df)[2:14], " Intercept")
+row.names(slr.stats)[2*(1:13)] <- colnames(df)[2:14]
+round(slr.stats, 4) 
+options(scipen = 999)
+# All predictors significant in SLR except nox
+
+# Try log transforms
+log.full.model <- lm(log(df$crim) ~ ., data = df)
+summary(log.full.model) # SE(res) = 0.7732, Mult R^2 = 87.54, Adj R^2 = 87.21
+# Generate 4-in-1 residuals plot for log.full.model
+par(mfrow = c(2, 2))
+qqnorm(log.full.model$residuals, main = "Normal Probability Plot of Raw Residuals")
+qqline(log.full.model$residuals)
+plot(fitted(log.full.model), rstudent(log.full.model), xlab = "Fitted Values",
+     ylab = "Studentized Residuals",
+     main = "Studentized Residuals vs. Fitted Values")
+abline(h = 0)
+hist(log.full.model$residuals, xlab = "Raw Residuals",
+     main = "Histogram of the Residuals")
+plot(log.full.model$residuals ~ seq(1:506), xlab = "Order", ylab = "Raw Residuals",
+     main = "Raw Residuals vs. Order")
+lines(log.full.model$residuals ~ seq(1:506))
+# Huge improvements in non-linearity for log.full.model.
+# Check observations vs. fits for log.full.model
+par(mfrow = c(1, 1))
+plot(log(df$crim) ~ log.full.model$fitted.values)
+
+# Examine each SLR WITH BOXCOX RESPONSE
+slr.stats2 <- matrix(numeric(), nrow = 26, ncol = 4)
+colnames(slr.stats2) <- colnames(summary(full.model)$coefficients)
+for (i in 1:13) {
+  temp.model <- lm(df$crim^(0.02) ~ df[ , i] )
+  slr.stats2[(2*i - 1), ] <- summary(temp.model)$coefficients[1, ]
+  slr.stats2[2*i, ] <- summary(temp.model)$coefficients[2, ]
+  rm(temp.model2) # Clean up temp.model
+}
+slr.stats2 <- as.data.frame(slr.stats2)
+row.names(slr.stats2)[2*(1:13) - 1] <- paste0(colnames(df)[2:14], " Intercept")
+row.names(slr.stats2)[2*(1:13)] <- colnames(df)[2:14]
+round(slr.stats2, 4) 
+options(scipen = 999)
+# All predictors significant in SLR WITH BOXCOX except nox
+
+#### Tracking best models ####
+
+box.full.model <- lm(df$crim^(0.02) ~ ., data = df)
+summary(box.full.model) # SE(res) = 0.01519, Mult R^2 = 87.84, Adj R^2 = 87.51
+# Box = 0.02 suggests chas, rm, dis, tax, and medv are not significant
+vif(box.full.model) # High for rad, tax
+# due to the insignificance of rad in box.full.model and the high VIF, remove 
+# rad for next model
+
+# Box transformed response, without rad
+box.full.model2 <- lm(df$crim^(0.02) ~ . - rad, data = df)
+summary(box.full.model2) # SE(res) = 0.01791, Mult R^2 = 83.05, Adj R^2 = 82.64
+vif(box.full.model2) # Reasonable
+
+# Box transformed response, without tax
+box.full.model4 <- lm(df$crim^(0.02) ~ . - tax, data = df)
+summary(box.full.model4) # SE(res) = 0.01517, Mult R^2 = 87.83, Adj R^2 = 87.54
+vif(box.full.model4) # Reasonable
+
+#### Move forward with box.full.model and see how the shrinkage methods handle extraneous variables
+library(leaps)
+set.seed(1)
+train=sample(c(TRUE,FALSE), nrow(df),rep=TRUE)
+test=(!train)
+
+## Begin validation set approach
+regfit.best=regsubsets(crim^(0.02) ~ . ,data=df[train, ], nvmax = 13)
+test.mat=model.matrix(crim^(0.02) ~ .,data=df[test,])
+val.errors=rep(NA,13)
+
+for(i in 1:13){
+  coefi=coef(regfit.best,id=i)
+  pred=test.mat[,names(coefi)]%*%coefi
+  val.errors[i]=mean(((df$crim[test])^(0.02) - pred)^2)
+}
+val.errors
+which(val.errors == min(val.errors)) # Returns 8
+
+# Fit with 8 predictor model on full data set
+regfit.best=regsubsets(crim^(0.02) ~ .,data=df,nvmax=13)
+coef(regfit.best,8)
+
+summary(lm(crim^(0.02) ~ zn + indus + nox + age + rad + ptratio + black +
+             lstat, data = df)) # SE(res) = 0.01515, Mult R^2 = 87.77, 
+# Adj. R^2 = 87.58, MSE = 0.0002295225
+vif(lm(crim^(0.02) ~ zn + indus + nox + age + rad + ptratio + black + lstat, data = df))
+## End validation set approach
+
+## Begin CV approach
+# Define predict.regsubsets function
+predict.regsubsets=function(object,newdata,id,...){
+  form=as.formula(object$call[[2]])
+  mat=model.matrix(form,newdata)
+  coefi=coef(object,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+}
+# Set up 10-fold CV
+k=10
+set.seed(1)
+folds=sample(1:k,nrow(df),replace=TRUE)
+cv.errors=matrix(NA,k,13, dimnames=list(NULL, paste(1:13)))
+# Define set up loop
+for(j in 1:k){
+  best.fit=regsubsets(crim^(0.02)~.,data=df[folds!=j,],
+                      nvmax=13)
+  for(i in 1:13){
+    pred=predict(best.fit,df[folds==j,],id=i)
+    cv.errors[j,i]=mean( ((df$crim[folds==j])^(0.02) -pred)^2)
+  }
+}
+mean.cv.errors=apply(cv.errors,2,mean)
+mean.cv.errors
+which(mean.cv.errors == min(mean.cv.errors)) # This returns a 9 predictor model
+par(mfrow=c(1,1))
+plot(mean.cv.errors,type="b")
+# Now fit the model with 9 predictor model on full data set
+reg.best=regsubsets(crim^(0.02) ~.,data=df, nvmax=13)
+coef(reg.best,9)
+
+summary(lm(crim^(0.02) ~ zn + indus + nox + age + rad + ptratio + black +
+             lstat + medv, data = df)) # SE(res) = 0.01514, Mult R^2 = 87.82, 
+# Adj. R^2 = 87.6
+vif(lm(crim^(0.02) ~ zn + indus + nox + age + rad + ptratio + black + lstat + medv, data = df))
+## End CV approach
+
+## Begin Ridge regression
+x=model.matrix(crim^(0.02) ~.,df)[,-1]
+y=(df$crim)^(0.02)
+grid=10^seq(10,-2,length=100)
+ridge.mod=glmnet(x,y,alpha=0,lambda=grid)
+# We can use predict() to obtain ridge coefficients for a new lambda, say, 50
+predict(ridge.mod,s=50,type="coefficients")[1:14,]
+# Set random seed
+set.seed(1)
+train=sample(1:nrow(x), nrow(x)/2)
+test=(-train)
+y.test=y[test]
+# Then fit ridge on training, evalue MSE.  We get predictions for a test set by replacing type = "coefficients" with the newx argument
+ridge.mod=glmnet(x[train,],y[train],alpha=0,lambda=grid, thresh=1e-12)
+ridge.pred=predict(ridge.mod,s=4,newx=x[test,])
+mean((ridge.pred-y.test)^2)
+# We instead use CV to select an optimal lambda with cv.glmnet().  Default is 10-fold; can be modified with argument folds.
+set.seed(1)
+cv.out=cv.glmnet(x[train,],y[train],alpha=0)
+plot(cv.out)
+bestlam=cv.out$lambda.min
+bestlam
+# And the test MSE for this best lambda is...
+ridge.pred=predict(ridge.mod,s=bestlam,newx=x[test,])
+mean((ridge.pred-y.test)^2) # Returns MSE = 0.0002698135
+# Lastly we refit the model on the full data set, using the value of lambda chosen by CV, then examine coefficient estimates.
+out=glmnet(x,y,alpha=0)
+predict(out,type="coefficients",s=bestlam)[1:14,]
+## End Ridge regression
+
+## Begin Lasso regression
+lasso.mod=glmnet(x[train,],y[train],alpha=1,lambda=grid)
+plot(lasso.mod)
+# We now perform CV and compute the test error
+set.seed(1)
+cv.out=cv.glmnet(x[train,],y[train],alpha=1)
+plot(cv.out)
+bestlam=cv.out$lambda.min
+lasso.pred=predict(lasso.mod,s=bestlam,newx=x[test,])
+mean((lasso.pred-y.test)^2) # Returns MSE = 0.0003935462; higher than Ridge
+# Let's check out the variable selection
+out=glmnet(x,y,alpha=1,lambda=grid)
+lasso.coef=predict(out,type="coefficients",s=bestlam)[1:14,]
+lasso.coef # Non-zero: indus, nox, age, dis, rad, lstat
+lasso.coef[lasso.coef!=0]
+## End Lasso regression
+
+# -----------------Up to line 343 is Data Analysis 4----------------------------
+## Begin PCR
+x=model.matrix(crim^(0.02) ~.,df)[,-1]
+y=(df$crim)^(0.02)
+grid=10^seq(10,-2,length=100)
+# Set random seed
+set.seed(1)
+train=sample(1:nrow(x), nrow(x)/2)
+test=(-train)
+y.test=y[test]
+
+set.seed(1)
+pcr.fit=pcr(crim^(0.02) ~ ., data=df,scale=TRUE,        validation="CV")
+# scale = TRUE standardizes each predictor.  Setting validation = "CV" causes pcr() to compute 10-fold CV error for each possible value of M. The fit can be examined via summary()
+summary(pcr.fit)
+pcr.fit$coefficients
+# Indicates 13 comps (least squares) gives lowest error
+validationplot(pcr.fit,val.type="MSEP")
+# We now perform PCR on the training data
+set.seed(1)
+pcr.fit=pcr(crim^(0.02) ~ ., data=df,subset=train,scale=TRUE, validation="CV")
+validationplot(pcr.fit,val.type="MSEP")
+summary(pcr.fit)
+pcr.pred=predict(pcr.fit,x[test,],ncomp=13)
+mean((pcr.pred-y.test)^2) # Returns test MSE = 0.0002630673
+# Then we use the optimal M and fit the full data set
+pcr.fit=pcr(y~x,scale=TRUE,ncomp=13)
+summary(pcr.fit)
+validationplot(pcr.fit,val.type="MSEP")
+pcr.fit$coefficients
+## End PCR
+
+## Begin PLS
+# We implement pls just like pcr()
+set.seed(1)
+pls.fit=plsr(crim^(0.02) ~ ., data=df,subset=train,scale=TRUE, validation="CV")
+summary(pls.fit) # Suggests M = 11:13 is optimal; use 11 for simplicity
+validationplot(pls.fit,val.type="MSEP")
+# Evaluate the test MSE
+pls.pred=predict(pls.fit,x[test,],ncomp=11)
+mean((pls.pred-y.test)^2) # Returns test MSE = 0.000262985
+# Then use PLS on the full data set
+pls.fit=plsr(crim^(0.02) ~ ., data=df,scale=TRUE, ncomp = 11)
+summary(pls.fit)
+pls.fit$coefficients
+## End PLS
+
+```

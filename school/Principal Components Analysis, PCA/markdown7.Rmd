@@ -1,0 +1,207 @@
+---
+title: "Data Analysis Report 7"
+author: "Will Kramlinger"
+date: "Feb. 24, 2019"
+output: 
+  html_document:
+    code_folding: hide
+    toc: TRUE
+    toc_depth: 2
+    toc_float: TRUE
+    fig_caption: true
+    theme: spacelab
+---
+<style>
+body {
+text-align: justify}
+</style>
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Introduction
+As an exercise in exploratory data analysis (EDA), Principal Components Analysis (PCA) was performed on a data set, **SR** (Standard Reference), consisting of nutritional content of various raw, processed, and prepared foods. The efficacy of PCA in successfully reducing the dimensionality of the data, while also maintaining dimension interpretability, was investigated via visual inspection of biplots and scree plots. A few basic methods of selecting an adequate amount of components were also explored.
+
+## Data
+The original data set was originally generated in May 2016 by the US Department of Agriculture, with suggested citation:
+
+*US Department of Agriculture, Agricultural Research Service, Nutrient Data Laboratory. USDA National Nutrient Database for Standard Reference, Release 28 (Slightly revised). Version Current: May 2016. Internet: http://www.ars.usda.gov/ba/bhnrc/ndl *
+
+The raw data was obtained second-hand in .txt file format. The data was subsequently cleaned via a pre-processing R script (code below) provided to the experimenter. Original dimensions of the data were 8790 observations across 52 predictor variables; 3 variables were categorical and the remaining 49 were numeric. All 6566 observations with missing values for any variable were removed from analysis. 1 observation was found to be included twice, and a duplicate was removed.  One of the categorical predictors consisted of each food's description; this variable was removed from analysis and then used as an identification for each observation. Finally, all of the remaining 5 predictors which did not consist of measured nutrient mass were removed, resulting in a **final data set of 2223 observations (foods) across 46 predictor variables (nutrient masses)**.
+  
+  
+```{r Cleaning, warning = FALSE, message = FALSE }
+rm(list = ls())
+library(ggplot2)
+library(ggfortify)
+options(digits = 3, scipen = 999)
+
+# Copy over pre-processing script and implement
+SR = read.table("ABBREV.txt", header=F, row.names=1, sep="^", quote="~")
+SR = na.omit(SR) # remove rows with missing values
+SR = SR[row.names(SR) != "13352",] # remove "duplicate" entry
+row.names(SR) = SR[,1] # set more meaningful row names
+SR = SR[,-1]
+names(SR) = c("Water_(g)", "Energ_Kcal", "Protein_(g)", "Lipid_Tot_(g)", "Ash_(g)", "Carbohydrt_(g)", "Fiber_TD_(g)", "Sugar_Tot_(g)", "Calcium_(mg)", "Iron_(mg)", "Magnesium_(mg)", "Phosphorus_(mg)", "Potassium_(mg)", "Sodium_(mg)", "Zinc_(mg)", "Copper_(mg)", "Manganese_(mg)", "Selenium_(µg)", "Vit_C_(mg)", "Thiamin_(mg)", "Riboflavin_(mg)", "Niacin_(mg)", "Panto_Acid_(mg)", "Vit_B6_(mg)", "Folate_Tot_(µg)", "Folic_Acid_(µg)", "Food_Folate_(µg)", "Folate_DFE_(µg)", "Choline_Tot_(mg)", "Vit_B12_(µg)", "Vit_A_IU", "Vit_A_RAE", "Retinol_(µg)", "Alpha_Carot_(µg)", "Beta_Carot_(µg)", "Beta_Crypt_(µg)", "Lycopene_(µg)", "Lut+Zea_(µg)", "Vit_E_(mg)", "Vit_D_µg", "Vit_D_IU", "Vit_K_(µg)", "FA_Sat_(g)", "FA_Mono_(g)", "FA_Poly_(g)", "Cholestrl_(mg)", "GmWt_1", "GmWt_Desc1", "GmWt_2", "GmWt_Desc2", "Refuse_Pct")
+SRp = SR[,c(1:46)] # restrict to just the nutrient variables
+df <- SRp
+```
+  
+  
+As a data summary, the mean and standard deviation for the 46 variables are presented below as Table 1. While not germane to the scope of this paper, of note is that the standard deviations of many of the variables exceed their respective means.
+  
+  
+```{r Table 1: Summary}
+library(knitr)
+library(kableExtra)
+# Implement PCA
+pr.out <- prcomp(df, scale = TRUE)
+# Center and scale are means, SD's of the variables used for scaling prior to 
+# implementing PCA
+## pr.out$center # == apply(df, 2, mean)
+## pr.out$scale # == apply(df, 2, sd)
+
+table1 <- matrix(rbind(pr.out$center, pr.out$scale), nrow = 2, ncol = 46, byrow = FALSE)
+colnames(table1) <- names(pr.out$center)
+row.names(table1) <- c("Mean", "Std. Deviation")
+table1 %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14, position = "center") %>% 
+  scroll_box(width = "100%", height = "135px")
+```
+*Table 1: Means and standard deviations of 46 predictor variables in data set.*     
+      
+## Results and Discussion
+
+#### PCA Implementation
+    
+PCA was conducted on the data set via the *prcomp()* function within base R 3.5. Of note is that the default functionality provides centering and standardization of the data; for each $p^{th}$ predictor $X_p$, $X_{p} \sim N(0, 1)$. The non-uniformity across the predictors' units of measure necessitates this scaling. The rotation matrix of principal component loadings is shown below as Table 2. A summary of each principal component's (PC) importance in explaining the variance in the data set is shown as Table 3.   
+
+
+```{r Table 2: PCA Loadings}
+# The rotation matrix provides principal component loadings; each column of 
+# pr.out$rotation contains the corresponding principal component loading vector
+# Recall there are generally min(n - 1, p) informative principal components
+table2 <- pr.out$rotation
+table2 %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14, position = "center") %>% 
+  scroll_box(width = "100%", height = "150px")
+```
+*Table 2: Rotation matrix for data set. Each column of the matrix contains the corresponding loading vector for the particular principal component.*  
+  
+  
+```{r Table 3: PCA Summary}
+pr.summ <- summary(pr.out)
+table3 <- pr.summ$importance
+table3 %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14, position = "center") %>% 
+  scroll_box(width = "100%", height = "210px")
+```
+*Table 3: Summary of PCA comprising standard deviations, proportion of data variance explained, and cumulative proportion of variance explained for all 46 principal components.*
+
+#### Optimizing PCA
+
+As reiterated throughout both the text and discussion board, a standard method of choosing the appropriate number of principal components does not exist. As an initial check of the efficacy of PCA in reducing the dimensionality of the data set, a **biplot** was generated for the first two principal components, which is shown as Fig. 1. 
+  
+
+```{r Figure 1: Biplot}
+# We can plot the first two principal components as follows:
+autoplot(pr.out, data = df, size = 0.5, 
+         label = FALSE, label.size = 1.2, label.colour = "purple",
+         label.label = 1:nrow(df),
+         loadings = TRUE, loadings.colour = 'blue',
+         loadings.label = TRUE, loadings.label.size = 3, cex = 0.5)
+```
+  
+*Fig. 1: Biplot of scaled observation scores (black dots) and variable loadings (blue arrows) for the first two principal components. Other than the predictor **water**, obvious groupings and differences amongst predictors are not immediately obvious.*
+
+With the exception of the predictor **Water_(g)**, the predictors, and subgroups of them, do not seem obviously classifiable or distinguishable via visual inspection. Of note is that each PC individually explains a noteworthy proportion of the variance (15.86% for PC1, 9.42% for PC2) if compared to the expected proportion when assuming complete orthogonality: 1/46 = 2.17%. However, the somewhat limited success of the first two principal components in capturing the overall variation of the data is reflected in their cumulative proportion of variance explained of 25.3%, which is somewhat low. In other words, it is highly unlikely usage of *only* 2 principal components will be adequate for future analysis.
+
+To further investigate this deduction, a **scree plot** was generated, which plots the percentage of overall variance explained by each principal component. Strictly speaking, a true **scree plot** displays the eigenvalue of each principal component; however, by dividing each eigenvalue by the number of predictors, $p = 46$, the proportion of variance explained is obtained. The scree plot is shown as Fig. 2a. 
+  
+A common method for choosing the number of principal components, recommended via the text and Prof. Talih, is visual identification of an **elbow** on the scree plot, i.e., a point where the data appears to level off. While likely not a robust method, the motivation is to locate the point of diminishing a returns. The subjective determination of the experimenter was that, **via visual inspection, the elbow of the scree plot was at Principal Component = 7**. 
+
+```{r Fig. 2: Scree}
+# The prcomp() function also outputs the SD of each principal component.
+## pr.out$sdev
+# The variance explained by each principal component is obtained by squaring
+pr.var <- pr.out$sdev^2
+## pr.var
+
+# The proportion of variance explained by each PC, we divide each variance by
+# the total variance
+pve <- pr.var/sum(pr.var)*100
+## pve
+
+# We can then plot the PVE explained by each component, as well as the 
+# cumulative PVE as follows:
+par(mfrow = c(1, 2))
+plot(pve, xlab = "Principal Component", 
+     ylab = "Pct of Variance Explained", ylim = c(0, 100), type = "b", col = "blue")
+lines(cumsum(pve), type = "b", col = "red", pch = 2)
+# Note that the function cumsum() computes the cumulative sum of the elements 
+# of a numeric vector
+plot(pve, xlab = "Principal Component", 
+     ylab = "Pct of Variance Explained", ylim = c(0, 20), col = "blue")
+text(x = 7, y = 3.2, labels = "7", col = "black")
+
+```
+
+*Fig. 2: (a, left) Scree plot for principal components; proportion of variance explained by each principal component shown by blue circles, cumulative proportion shown as red triangles. (b, right) Via visual inspection of scree plot, elbow identified by experimenter at PC7.*
+  
+In an attempt to more easily identify the elbow, the first derivative of the proportion of variance (Pct) explained with respect to PC ($\frac{d(Pct)}{d(PC)}$) was plotted against PC; this plot as shown as Fig. 3. The hypothesis was made that the elbow should be located at the point immediately before the derivative levels off, i.e., approaches 0. While still a subjective method, the plot did indeed enable a seemingly more precise determination. Thus, **via usage of numerical differentiation and visual inspection of a plot of the derivative, the elbow of the scree plot was determined to be at Principal Component = 7**. 
+
+*NOTE*: The derivative calculation was performed utilizing a 5-point central difference formula as outlined in <https://dmpeli.math.mcmaster.ca/Matlab/Math4Q3/NumMethods/Lecture3-3.html>. Thus, values at PC = 1, 2, 45, and 46 were not calculated and left as 0. However, this was deemed justifiable considering the previous analysis of the biplot in Fig. 1.
+
+```{r Fig. 3: Derivative}
+## Method #2: Numerical differentiation and peaks of derivatives
+# See https://dmpeli.math.mcmaster.ca/Matlab/Math4Q3/NumMethods/Lecture3-3.html
+h <- 1
+# Calculate 5-point central difference for components = 3:44
+first.deriv <- numeric(length = 46)
+for (i in 3:44) {
+  first.deriv[i] <- (-pve[i + 2] + 8*pve[i + 1] - 8*pve[i -1] + pve[i - 2]) / 
+    (12*h)
+}
+
+plot(-first.deriv, pch = 1, xlab = "Principal Component", 
+     ylab = "d(Pct) / d(PC)", col = "orange")
+text(x = 7, y = 0.6, labels = "7", col = "black")
+```
+  
+*Fig. 3: Plot of* $\frac{d(Pct)}{d(PC)}$ *vs. Principal Component. The elbow was identified to be the point prior to leveling off, which was determined to be PC7.*
+
+Two other methods for selecting the optimal number of principal components were considered based on suggestions found at <https://blog.bioturing.com/2018/06/18/how-to-read-pca-biplots-and-scree-plots/>, namely, (1) the lowest PC where the cumulative percentage of variation explained $\geq$ 80%, and (2) the highest PC where the eigenvalue > 1.
+
+Re-inspection of Table 3 above reveals that via the first method's criterion (> 80%), the optimal number of principal components was 16. 
+
+The eigenvalues for each PC were back-calculated via the aforementioned definition of the scree plot definition, $eig_{PC} = \frac{Pct_{PC} \times 46}{100}$ . Thus, via this eigenvalue calculation and criterion, the optimal amount of principal components was found to be 14. A summary of the methods employed and the resulting suggested number of principal components is shown as Table 4.
+
+```{r Table 4: Method Summary}
+thresh.table <- matrix(ncol = 2, nrow = 4)
+colnames(thresh.table) <- c("Selection Method", "No. of Principal Components")
+thresh.table[1, ] <- c("Elbow of scree plot, visual", 7)
+thresh.table[2, ] <- c("Elbow of scree plot, derivative", 7)
+thresh.table[3, ] <- c("Cum. % of variance explained > 80", 16)
+thresh.table[4, ] <- c("Eigenvalue > 1", 14)
+thresh.table %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14, position = "center") %>% 
+  scroll_box(width = "100%", height = "180px")
+```
+*Table 4: Summary of methods employed to choose the number of principal components and respective results.*
+
+## Conclusions
+
+The efficacy of PCA in successfully reducing the dimensionality of the **SR** data set, while also maintaining dimension interpretability (i.e., PC = 2 or 3), was investigated via visual inspection of biplots and scree plots. Examination of the biplot for the first two principal components (PC) strongly suggested that the optimal number was greater than 2.  A few basic methods of selecting an adequate amount of components were also explored, involving elbow identification on the scree plot, as well as enforcing criteria using the cumulative percentage explained at each component (> 80%), as well as the eigenvalue of each component (> 1).  The latter two criterion-based methods were found to be much more conservative (suggested PC = 16, 14) than the elbow-based methods (PC = 7). Given the results of these methods and the seemingly poor ability of PCA to capture enough variation in the dataset at lower PC values, other data visualization methods are recommended for this particular data set; external sources suggest t-distributed stochastic neighbor embedding (t-SNE) or multidimensional scaling (MDS) may be effective.
+
+## Appendix I: R Code
+
+All code for this analysis can be found above!

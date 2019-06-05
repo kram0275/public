@@ -1,0 +1,323 @@
+---
+title: "Data Analysis Report 1"
+author: "Will Kramlinger"
+date: "January 13, 2019"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+<style>
+body {
+text-align: justify}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Exploratory data analysis (EDA) was conducted on a data set comprising median
+housing values of various Boston suburbs and potential predictors.
+Correlations among predictors were examined, with particular attention paid to 
+pairwise correlations with per capita crime rates, of which many were 
+significant.  Commonalities amongst predictors were examined for suburbs with 
+low median household values, as well as for suburbs which average a large number 
+of rooms per dwelling.
+
+
+## Data
+The data set analyzed was the **Boston** data set included in the R package 
+**MASS**.  The set includes observations for 506 suburbs across 14 variables. 
+For variable definitions, please refer to <https://www.rdocumentation.org/packages/MASS/versions/7.3-47/topics/Boston>. 
+The following shall presume the reader's familarity with the variable names and
+their meanings, as they are used interchangeably.  A check for missing data 
+within the set revealed no problems and no cleaning was deemed necessary.  A 
+simple 5-number summary for each variable, along with each mean, was calculated 
+as Table 1.
+
+The project was an initial exploration of the data set intended as an exercise
+in data visualization and basic descriptive statistics.  As the scope of 
+this report is limited to EDA, an investigation of possible influential points 
+was not undertaken.
+
+
+## Analyses
+
+*Correlation among predictors*
+
+Correlation amongst the variables was investigated via scatterplot and
+correlation matrices. A few of the most highly correlated linear relationships 
+between predictor pairs are shown as Figs. 1a (**nox** vs. **age**, *r* = 0.731)
+and 1b (**medv** vs **lstat**, *r* = -0.738).  While visual inspection of these
+plots reveals clear trends, which are supported quantitively via the correlation
+values, the trends do not appear to be strictly linear, but rather curvilinear;
+this observation holds true for many of the variable pairs. Thus, for future 
+regression analysis, transformation of variables will likely be necessary, with
+transformations informed via residual analyses. Additionally, if a combination 
+of these variables are used as predictors, a careful approach is advised as to 
+avoid multicollinearity.
+
+*Per capita crime rates*
+
+Of particular interest in this analysis was the per capita crime rate (**crim**)
+and its association with the other predictors in the data set.  While not 
+reflected in the correlation matrix values, the variable demonstrated 
+visible trends for nearly every instance that it was plotted pairwise 
+against the other variables.   
+
+Generally, 4 classes of trends were observed:  
+1) The full range of crime rate values were found to be mostly included at one
+particular level of the predictor; at all other levels of the predictor, the
+crime rates were much more narrowly distributed and nearly equal to the minimum 
+values of all crime rate values in the data set.  The subset of predictors for
+which this trend was observed is discussed further below.  
+2) Both the mean response and overall variation in the crime rate values 
+increased as the predictor level either increased (positive correlation; **age**
+, **lstat**) or decreased (negative correlation; **dist**, **medv**).  All of
+these trends between variable pairs appeared more curvilinear than linear, 
+akin to the previous discussion.  
+3) The overall variation in the crime rate values was largest at 
+intermediate values of the predictor, and grew smaller as
+the predictor levels were moved further away from these intermediate values. In
+other words, the curves resembled a unimodal distribution.  This trend was 
+observed for predictors **nox** and **rm**.  
+4) The overall variation in the crime rate values was smallest at 
+intermediate values of the predictor, and grew larger as
+the predictor levels were moved further away from these intermediate values. In
+other words, the data resembed a bimodal distribution.  This trend was observed 
+for predictor **black**.
+
+The trend of particular note is the first class, which was observed when crime 
+rate (**crim**) was plotted against each 
+of **zn**, **indus**, **chas**, **rad**, **tax**, and **ptratio**.  A 
+representative plot of this trend is shown as Fig. 2, where the majority 
+of the variation in crime rate was observed at the specific predictor level 
+**ptratio** = 20.2.  Other predictor levels where this pattern was observed 
+included **zn** = 0, **indus** = 18.10, **chas** = 0, **rad** = 24, and **tax** 
+= 666. Furthermore, it was found that of the suburbs in the top 25% (*n* = 127, 
+**crim** > 3.667) in terms of crime rate, 120/127 = 94% of them shared *all* of 
+these specific predictor values.  Further analysis revealed that these specific 
+predictor levels, with the exception of **chas** = 0 (see below), are severely 
+over-represented within these high-crime suburbs.  Comparison of these predictor 
+levels with the summary in Table 1 reveals that these values are equal to either 
+the 25th (**zn**, **chas**) or 75th (**indus**, **rad**, **tax**, **ptratio**)
+percentiles for each particular variable in the data set, which suggests a 
+large degree of commonality between these suburbs.
+
+Of practical significance is the observation that this majority of suburbs with 
+high crime rates had no residential lots over 25,000 sq ft (**zn** = 0), 
+full-value property tax rate values which were near the highest observed in the 
+overall data, a relatively high pupil:teacher ratio, and a high index of radial 
+highway accessibility (research into whether a high index indicates high or low 
+accessibility yielded no results).  Further investigation of these suburbs is 
+warranted; a spatial analysis may be particularly useful.  Additionally, the 
+plausibility of grouping these suburbs into one class should be considered for 
+the sake of variable reduction in future analyses.  Please note that **chas** = 
+0 (i.e., not on the Charles River) is specifically not mentioned for this 
+particular analyses, as it is not considered practically 
+meaningful. For **chas** = 0, the proportion of suburbs in the overall data set 
+(471/506 = 0.931) was found to be not statistically different from the 
+proportion found within the top 25% suburbs in terms of crime rate (120/127 =
+0.945) at 99% confidence.
+
+*Median values of owner-occupied homes*
+
+As an initial step into understanding various predictors' relationships with the 
+median household values (**medv**) of all Boston suburbs, the suburb with the 
+lowest **medv** was identified.  Two suburbs were found to have this minimum 
+value of **medv** = 5, namely, suburbs 399 and 406.  Each suburb's predictor 
+levels and corresponding percentiles across the 13 other predictors are 
+tabulated in Table 2.
+
+Inspection of Table 2 reveals that the suburbs under analysis share common 
+predictor levels across the majority of variables, with the exception of the
+predictor **black**.  In terms of percentiles, the two suburbs differ from each
+other by, at most, 8, with the exception of predictor **black** which differs 
+by 66.  Recall the previous discussion about the first class of trends seen
+for the variable **crim** and the associated predictor levels of **zn**,
+**indus**, **chas**, **rad**, **tax**, and **ptratio**; these specific levels 
+are also seen for suburbs 399 and 406, suggesting that suburbs with low median 
+household values may be correlated with higher per capita crime rates.  
+
+Additionally, the observed values for **nox**, **age**, **rm**, **dis**, and 
+**lstat** are similar for the two suburbs. Specifically, the values of **nox**, 
+**age**, and **lstat** for each suburb reside near the higher end of each 
+variable's range; the values of **rm** and **dis** reside at the lower ends.  
+Practically, this preliminary analysis suggests that suburbs with lower median 
+household values may also be characterized via higher NO concentrations, older 
+homes with relatively few rooms, a higher percentage of lower status population, 
+and close proximities to Boston employment centers.
+
+*Average number of rooms per dwelling*
+
+An initial investigation into suburbs with higher levels of average number of
+rooms per dwelling (**rm**) was conducted.  The proportion of suburbs within
+the data set with values of **rm** > 7, 8 were found to be 12.6% and 2.6%,
+respectively.
+
+Comparisons of the mean response of variables for the groups
+**rm** > 8 vs. **rm** < 8 were conducted via t-test at 95% confidence with a
+null hypothesis of no difference; results are shown as Table 3.  Variables where 
+statistically significant differences between group means were observed included 
+**crim**, **indus**, **tax**, **ptratio**, **black**, **lstat**, and **medv**.  
+Of these variables, the mean responses for predictors **black** and **medv** 
+were found to be greater for the **rm** > 8 group; all other mean responses 
+were found to be smaller for the **rm** > 8 group.  
+
+## Plots and Tables
+
+```{r Load, echo = FALSE}
+# Load data set, check missing values, obtain 5-number summary
+rm(list = ls())
+library(MASS)
+df <- Boston # Copy data for less typing and to maintain original set
+```
+
+Table 1: 5-number summary across all variables in the Boston data set
+```{r Table1, echo = FALSE}
+table1 <- summary(df)
+names(dimnames(table1)) <- 
+  list("", 
+       "Table 1: 5 number summary and mean for each variable in Boston dataset")
+table1
+```
+
+
+```{r fig1, echo = FALSE}
+plot(df$nox ~ df$age, xlab = "Proportion", ylab = "Concentration (ppm)")
+title(sub = "Fig. 1a")
+plot(df$medv ~ df$lstat, xlab = '"Lower" Status (%)', ylab = "Value ($1000)")
+title(sub = "Fig. 1b")
+```
+
+Fig. 1: (a) NO Concentration vs. Proportion of Units 
+Built Before 1940 shows positive correlation. (b) 
+Median Owner-Occupied Household Value vs. Proportion of Lower Status Population 
+shows negative correlation.  Examples of typical trends seen between variable 
+pairs in the data set with highest linear correlations; linear correlations 
+likely to improve with variable transformations.
+
+
+```{r fig2, echo = FALSE}
+plot(df$crim ~ df$ptratio, xlab = "Ratio", ylab = "Crime Rate")
+title(sub = "Fig. 2")
+```
+
+Fig. 2: Per capita crime rate vs. average pupil-teacher ratio. Example of trend 
+seen when per capita crime rate is plotted pairwise against multiple other 
+predictors, where most of the response variation is observed at one 
+specific predictor level.  The variation is seen at **ptratio** = 20.2 in this
+instance.
+
+
+Table 2: Predictor values and associated percentiles for suburbs with the 
+minimum median household value observed in dataset (**medv** = 5).  All 
+predictor levels generally fall in the top or bottom 15% of the range of levels 
+observedin full data set.  
+```{r Pctiles, Table2, echo = FALSE}
+pctiles_legend <- as.data.frame(matrix(ncol = 14, nrow = 100))
+pctiles_min_medv <- as.data.frame(matrix(ncol = 14, nrow = 2))
+min_medv_index <- which(df$medv == min(df$medv))
+colnames(pctiles_legend) <- colnames(df)
+colnames(pctiles_min_medv) <- colnames(df)
+for (i in 1:14) {
+  for(k in 1:2) {
+    pctiles_legend[ , i] <- quantile(df[ , i], seq_len(100) * 0.01)
+    pctiles_min_medv[k, i] <- findInterval(df[min_medv_index[k], i], 
+                                            pctiles_legend[ , i])
+  }
+}
+values_min_medv <- data.frame(rbind(df[399, ], df[406, ]))
+table2 <- data.frame(rbind(round(values_min_medv[1, ], 1), 
+                           round(pctiles_min_medv[1, ], 0),
+                           round(values_min_medv[2, ], 1),
+                           round(pctiles_min_medv[2, ], 0)))
+row.names(table2) <- c("Suburb 399 - Values", "Suburb 399 - Percentiles",
+                       "Suburb 406 - Values", "Suburb 406 - Percentiles")
+table2[, -14]
+```
+
+
+Table 3: Statistics, p-values, and 95% CIs generated from 2-sample, 2-sided 
+t-tests comparing groups of suburbs with more or less than 8 rooms per dwelling, 
+with null hypothesis of no difference.
+```{r Table3, echo = FALSE}
+# Calculate percentiles for suburbs averaging more than 8 rooms/dwelling
+pctiles_morethan8 <- as.data.frame(matrix(ncol = 14, nrow = 13))
+morethan8_index <- which(df$rm > 8)
+colnames(pctiles_morethan8) <- colnames(df)
+for (i in 1:14) {
+  for(k in 1:13) {
+    pctiles_morethan8[k, i] <- findInterval(df[morethan8_index[k], i], 
+                                            pctiles_legend[ , i])
+  }
+}
+values_morethan8 <- df[which(df$rm > 8), ]
+values_lessthan8 <- df[-which(df$rm > 8), ]
+t_test_values <- as.data.frame(matrix(nrow = 4, ncol = 14))
+rownames(t_test_values) <- c("t_statistic", "p-value", "95% CI, Low", 
+                             "95% CI, High")
+colnames(t_test_values) <- colnames(df)
+for(i in 1:14) {
+  p <- t.test(values_morethan8[ , i], values_lessthan8[ , i], conf.level = 0.95)
+  t_test_values[1, i] <- round(p$statistic, 2)
+  t_test_values[2, i] <- round(p$p.value, 3)
+  t_test_values[3, i] <- round(p[[4]][1], 2)
+  t_test_values[4, i] <- round(p[[4]][2], 2)
+}
+t_test_values[ , c(1:3, 5, 7:14)]
+```
+
+## Conclusions
+Inspection of correlation and scatterplot matrices for the Boston data set 
+revealed multiple linear associations between pairs of variables, as well as 
+other noticeable trends; future analysis should carefully consider these 
+correlations and perhaps eliminate them as to avoid multicollinearity.  
+
+A particular trend was observed for plots of per capita crime rate (**crim**) 
+against predictors **zn**, **indus**, **chas**, **rad**, **tax**, and 
+**ptratio**, where the near entirety of the variation of **crim** was found at 
+one specific predictor level.  Suburbs which shared this specific combination of 
+predictor levels were found to comprise 93.1% of the suburbs in the top 25% with 
+respect to per capita crime rate.  
+
+Numerical summaries for suburbs having the minimum median household value 
+(**medv** = 5) observed in the data suggested that lower values may be 
+characterized via higher NO concentrations, older homes with relatively few 
+rooms, a higher percentage of lower status population, and close proximities to 
+Boston employment centers.  Summaries and t-tests for suburbs found to have
+a high average number of rooms per dwelling (**rm** > 8) suggested that these
+suburbs tend to score higher on measures for the predictor **black** and median
+household value, and lower measures for per capita crime rate, degree of 
+industrialization, property-tax rates, pupil-teacher ratios, and percentage of
+population regarded as lower status.
+
+
+## Appendix I: R Code
+
+The following code does not generate any figures and supplements that which is 
+found in the Plots and Tables section.
+
+```{r Missing, results = "hide"}
+which(is.na(df) == TRUE) # Locates missing values, if any; returns 0
+```
+
+```{r Chas, results = "hide"}
+dim(df[df$chas == 1, ]) # [35 14] ==> 35 suburbs bound the Charles River
+35/506 # 0.0692 = proportion of suburbs on Charles River
+7/127 # 0.0551 = proportion of "high crime" (top 25%) suburbs on Charles River
+```
+
+```{r ChasTest}
+# Conduct 2-sample proportion z-test at 99% confidence
+off.river <- c(120, 471)
+total <- c(127, 506)
+prop.test(off.river, total, conf.level = 0.99)
+```
+
+```{r More8, results = "hide"}
+dim(df[df$rm > 7, ]) # [64 14] ==> 64 suburbs average more than 7 rooms/dwelling
+dim(df[df$rm > 8, ]) # [13 14] ==> 13 suburbs average more than 8 rooms/dwelling
+```
+

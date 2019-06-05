@@ -1,0 +1,400 @@
+---
+title: "Data Analysis Report 9"
+author: "Will Kramlinger"
+date: "March 17, 2019"
+output: 
+  html_document:
+    code_folding: hide
+    toc: TRUE
+    toc_depth: 2
+    toc_float: TRUE
+    fig_caption: true
+    theme: spacelab
+---
+<style>
+body {
+text-align: justify}
+</style>
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Introduction
+Exploratory data analysis (EDA) was conducted on a data set comprising weekly
+percentage returns for the S&P 500 stock index between 1990 and 2010.
+Subsequently, 3 classification techniques were implemented on the data to model
+the binary response **Direction**, which indicates whether the market had a
+positive or negative return on a given week. The techniques examined included
+logistic regression, linear discriminant analysis (LDA), and quadratic
+discriminant analysis (QDA). The success of these 3 methods in predicting the
+response, measured primarily by test set prediction error rates, were compared
+and contrasted.
+
+
+## Data
+The data set analyzed was the **Weekly** data set included in the R package 
+**ISLR**.  The set includes observations for 1089 weeks across 9 variables. 
+For variable definitions, please refer to <https://rdrr.io/cran/ISLR/man/Weekly.html>. 
+The following shall presume the reader's familarity with the variable names and
+their meanings, as they are used interchangeably.  A check for missing data 
+within the set revealed no problems and no cleaning was deemed necessary. To 
+avoid ambiguity, the response **Direction** was re-coded numerically, where 
+weeks of the level "Up" were coded as 1, and weeks of the level "Down" were 
+coded as 0. 
+
+A simple 5-number summary for each variable, along with each mean, was calculated as Table 1.
+
+```{r Table 1: Summary, message = FALSE}
+rm(list = ls())
+library(ISLR)
+library(MASS)
+library(bestglm)
+library(knitr)
+library(kableExtra)
+options(digits = 3)
+df <- Weekly
+df$numDirection <- numeric(length(df[ , 1]))
+df$numDirection[df$Direction == "Up"] <- 1
+df <- df[ , -9]
+colnames(df)[9] <- "Direction"
+
+df.summ <- summary(df)
+colnames(df.summ) <- gsub(" ", "", colnames(df.summ), fixed = TRUE)
+df.summ %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "100%", height = "110px")
+```
+Table 1: 5-number summary for all variables in **Weekly** data set.
+
+## Results and Discussion
+
+#### Exploratory Data Analysis
+Pairwise correlations within the **Weekly** data set were examined via
+correlation and scatterplot matrices. Only two notable correlations were found:
+**Year-Volume** ($r = 0.842$) and **Today-Direction** ($r = 0.720$). The first
+correlation suggested a high risk of collinearity and removal of one of the
+variables; this was implemented in the prescribed analysis procedure, where the
+variable **Year** is not considered in the set of possible predictors. The
+latter pairwise correlation warrants a more thorough explanation. While the
+experimenter may instinctually deduce that **Today** should be included as a
+predictor for **Direction**, the variables are defined in such a way that
+**Direction** serves as a bin variable for **Today**, i.e., 
+
+<center>
+$Today > 0 \Rightarrow Direction = 1$  
+$Today < 0 \Rightarrow Direction = 0$.  
+
+</center>
+
+Because of this correlation, **Today** was not considered as a predictor 
+variable for this analysis; however, such data may be more valuable than 
+**Direction** for other regression analyses
+
+Histograms for all remaining predictors were generated. Two representative
+distributions are shown as Fig. 1. The distributions of all of the **Lag**
+variables appeared approximately normal, while the distribution for **Volume**
+was strongly skewed to the right. The implications of the skewed distribution
+are discussed below.
+
+<center>
+```{r Fig. 1: Histograms, results = "hide"}
+par(mfrow = c(1, 2))
+hist(df$Lag1, main = "Histogram of Lag1", xlab = "Lag1")
+hist(df$Volume, main = "Histogram of Volume", xlab = "Volume")
+par(mfrow = c(1, 1))
+```
+</center>
+
+Fig. 1: Histograms of **Lag1** (left) and **Volume** (right). The left plot 
+displays an approximately normal distribution, which is representative of the 
+distribution for all other **LagX** variables. The right plot displays a 
+distribution which is strongly skewed to the right, suggesting a variable 
+transformation for **Volume** may be warranted.
+
+#### Logistic Regression
+Logistic regression was first performed on the full data set using **Direction** as the response and the five **LagX** variables plus **Volume** as predictors. The regression coefficients for this full model are shown as Table 2. Based on the p-values, the only statistically significant variable at 95% confidence was **Lag2**, with $p = 0.030$. However, it should be noted that the non-intercept predictor with the next highest statistical significance was **Lag1**, with $p = 0.118$. This is noteworthy as the hierarchy principle suggests that inclusion of **Lag2** as a predictor in a model also necessitates inclusion of **Lag1**, and also for reasons discussed below.
+
+```{r Table 2: Full Logistic}
+log.full.model <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume, 
+                      family = binomial, data = df)
+log.full.summ <- summary(log.full.model)
+log.full.summ$coefficients %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "100%", height = "135px")
+```
+  
+Table 2: Logistic regression summary for **Direction** regressed on 5 **LagX** predictors and **Volume**. P-values suggest **Lag2** is the most significant predictor, followed by **Lag1**. 
+  
+
+The confusion matrix for this model was generated and is shown below as Table 3. From Table 3, the overall correct prediction rate can be calculated as  
+
+<center>
+$PctCorrect = \frac{(54 + 557)}{1089} \times 100 = 56.1$,  
+
+</center>
+which is a significant amount better than random chance. However, as noted in the Labs in the text, this value holds little significance as the training and test sets for the model are, in this case, identical.
+
+<center>
+```{r Table 3: Full Logistic Confusion}
+log.full.probs <- predict(log.full.model, type = "response")
+# contrasts(df$Direction) # This only applies when Direction is qualitative
+log.full.pred <- rep(0,1089)
+log.full.pred[log.full.probs > 0.5] <- 1
+# Given the predictions, the table() function can be used to produce 
+# a confusion matrix in order to determine how many observations were
+# correctly or incorrectly classified.
+table(log.full.pred, df$Direction) %>%
+  kable(align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "25%", height = "110px")
+```
+</center>
+
+Table 3: Confusion matrix for logistic regression model referenced in Table 2 applied to the entire data set.  The overall prediction success rate is 56.1%.
+  
+  
+In accordance with better statistical practice, a prescribed train-test split was applied to the data set. The training set was defined as all observations with **Year** $\leq$ 2008, with the remaining observations (2009, 2010) used as the test set. The test set data consisted of $n = 104$ observations. A new logistic regression model was then generated using only the predictor **Lag2** (ignoring the hierarchy principle mentioned above) with the training data set; the confusion matrix for this model applied to the test set is shown as Table 4.
+
+<center>
+```{r Table 4: Train Logistic Confusion}
+train <- (df$Year <= 2008)
+df.test <- df[!train, ]
+Direction.test <- df$Direction[!train]
+# We now fit a logistic regression model using only the subset of the 
+# observations that correspond to dates before 2009, using the subset 
+# argument.
+log.train.model <- glm(Direction ~  Lag2, data = df, family = binomial, subset = train)
+log.train.probs <- predict(log.train.model, df.test, type = "response")
+log.train.pred <- rep(0,104)
+log.train.pred[log.train.probs > 0.5] <- 1
+# Given the predictions, the table() function can be used to produce 
+# a confusion matrix in order to determine how many observations were
+# correctly or incorrectly classified.
+table(log.train.pred, Direction.test) %>%
+  kable(align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "25%", height = "110px")
+```
+</center>
+Table 4: Confusion matrix for logistic regression model using only **Lag2** as predictor, applied to the test set.  The overall prediction success rate is 62.5%.
+  
+  
+From Table 4, the overall correct prediction rate can be calculated as  
+
+<center>
+$PctCorrect = \frac{(9 + 56)}{104} \times 100 = 62.5$,  
+
+</center>
+which is a substantial improvement over the results from the model used for Tables 2 and 3. The improvement is likely attributable to the variable selection process and reducing the variance caused by extraneous predictors.
+
+#### Linear Discriminant Analysis (LDA)
+LDA was conducted with the **MASS** package in R using the same predictors and train-test split described above for logistic regression. The confusion matrix for the analysis is presented as Table 5.  
+
+<center>
+```{r Table 5: LDA Confusion}
+lda.train.model <- lda(Direction ~ Lag2, data = df, subset = train)
+# lda.train.model
+lda.train.pred <- predict(lda.train.model, df.test)
+# names(lda.train.pred)
+# The LDA and logistic regression predictions are almost identical.
+lda.train.class <- lda.train.pred$class
+table(lda.train.class, Direction.test) %>%
+  kable(align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "25%", height = "110px")
+```
+</center>
+Table 5: Confusion matrix for LDA model using only **Lag2** as predictor, applied to the test set.  The overall prediction success rate is 62.5%.  
+  
+  
+From Table 5, the overall correct prediction rate can be calculated as  
+
+<center>
+$PctCorrect = \frac{(9 + 56)}{104} \times 100 = 62.5$,  
+
+</center>
+which is exactly the same as the results seen for the logistic regression model referenced in Table 4. The result corroborates the notion that logistic regression and LDA give similar results, provided that the predictors' distributions are approximately normal. This normality of **Lag2** was previously confirmed in the EDA.  
+
+#### Quadratic Discriminant Analysis (QDA)
+QDA was conducted with the **MASS** package in R using the same predictors and train-test split described above for both logistic regression and QDA. The confusion matrix for the analysis is presented as Table 6.  
+
+<center>
+```{r Table 6: QDA Confusion}
+qda.train.model <- qda(Direction ~ Lag2, data = df, subset = train)
+# qda.train.model
+qda.train.pred <- predict(qda.train.model, df.test)
+# names(qda.train.pred)
+qda.train.class <- qda.train.pred$class
+table(qda.train.class, Direction.test) %>%
+  kable(align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "25%", height = "110px")
+```
+</center>
+Table 6: Confusion matrix for QDA model using only **Lag2** as predictor, applied to the test set.  The overall prediction success rate is 58.7%. 
+
+From Table 6, the overall correct prediction rate can be calculated as  
+
+<center>
+$PctCorrect = \frac{(0 + 61)}{104} \times 100 = 58.7$,  
+
+</center>
+which is worse than the results seen for both logistic regression and LDA. A peculiar observation is that QDA predicted all observations to be 1, i.e., increasing. This strongly suggests that the posterior probability threshold should be increased until the predicted proportion of **Direction** = 1 approaches the actual proportion in the test set ($p\approx 58.7\%$).  In hindsight, all 3 analyses suffer from this problem, though it is the most severe in this instance.
+
+#### Variable Transformations
+Given the assumptions of normality within predictor levels and the results of EDA, the lone predictor variable transformation examined was a logarithmic transformation of the variable **Volume**. However, this transformation did not prove beneficial in terms of better prediction success rates. Using the **bestglm** package in R, best subsets regression also suggested that the transformation was not worthwhile.
+
+Due to time constraints, a logarithmic transformation of the response variable was not conducted, but may be worthwhile to explore. However, the experimenter would need to recode any response of **Direction** = 0 into something slightly more positive, i.e., 0.00001.
+
+## Conclusions
+The **Weekly** data set was explored and subject to classification modelling using **Direction** as a response. Given the prescribed lone predictor of **Lag2** and train-test split of *train* = $\{Year \leq 2008\}$, else *test*, logistic regression and LDA provided identical test success rates of 62.5%, followed by QDA which provided an overall success rate of 58.7%. The similar success rates of LDA and logistic regression supported the notion of their similarity, given normally distributed predictor levels. All analyses used a probability threshold of 50%, which caused an overrepresentation of positives for each analysis, which was particularly severe for QDA; this threshold is strongly recommended to be increased during fine-tuning of the models.
+
+
+## Appendix I: R Code
+
+```{r}
+rm(list = ls())
+library(ISLR)
+df <- Weekly
+df$numDirection <- numeric(length(df[ , 1]))
+df$numDirection[df$Direction == "Up"] <- 1
+df <- df[ , -9]
+colnames(df)[9] <- "Direction"
+
+for(i in 1:9) {
+  hist(df[ , i], 
+       xlab = paste0(colnames(df)[i]),
+       main = paste0("Histogram of ", colnames(df)[i])
+  )
+}
+# Histograms suggest that Volume should be transformed
+hist(log(df$Volume))
+
+df.summ <- summary(df)
+colnames(df.summ) <- gsub(" ", "", colnames(df.summ), fixed = TRUE)
+df.summ
+
+corr.matrix <- cor(df) 
+corr.matrix
+# Cor(Year, Volume) = 0.8419, Cor(Direction, Today) others insignificant
+# pairs(df) 
+# Correlation between Year:Volume also seen visually, though not strictly 
+# linear. BoxCox would probably be a good bet for this one if needed.
+
+
+## Logistic Regression
+log.full.model <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume, family = binomial, data = df)
+log.full.summ <- summary(log.full.model)
+log.full.summ
+# Lag1, Lag2 (p = 0.1181, 0.0296) appear to be significant. By hierarchy
+# principle, should probably include Lag1 with Lag2.
+
+log.full.probs <- predict(log.full.model, type = "response")
+log.full.probs[1:10]
+# contrasts(df$Direction) # This only applies when Direction is qualitative
+log.full.pred <- rep("Down",1089)
+log.full.pred[log.full.probs > 0.5] <- "Up"
+# Given the predictions, the table() function can be used to produce 
+# a confusion matrix in order to determine how many observations were
+# correctly or incorrectly classified.
+table(log.full.pred, df$Direction)
+# Confusion matrix gives an overall accuracy rate of ~56%.  Not particularly great.
+
+train <- (df$Year <= 2008)
+df.test <- df[!train, ]
+Direction.test <- df$Direction[!train]
+# We now fit a logistic regression model using only the subset of the 
+# observations that correspond to dates before 2005, using the subset 
+# argument.
+log.train.model <- glm(Direction ~  Lag2, data = df, family = binomial, subset = train)
+log.train.probs <- predict(log.train.model, df.test, type = "response")
+log.train.pred <- rep("Down",104)
+log.train.pred[log.train.probs > 0.5] <- "Up"
+# Given the predictions, the table() function can be used to produce 
+# a confusion matrix in order to determine how many observations were
+# correctly or incorrectly classified.
+table(log.train.pred, Direction.test)
+# Overall correct prediction rate = (9 + 56) / (104) = 62.5%
+
+
+## LDA
+library(MASS)
+lda.train.model <- lda(Direction ~ Lag2, data = df, subset = train)
+lda.train.model
+lda.train.pred <- predict(lda.train.model, df.test)
+names(lda.train.pred)
+# The LDA and logistic regression predictions are almost identical.
+lda.train.class <- lda.train.pred$class
+table(lda.train.class, Direction.test)
+# Overall correct prediction rate = (9 + 56) / 104 = 62.5%.  This matches the logistic regression results.
+mean(lda.train.class == Direction.test)
+
+## QDA
+qda.train.model <- qda(Direction ~ Lag2, data = df, subset = train)
+qda.train.model
+qda.train.pred <- predict(qda.train.model, df.test)
+names(qda.train.pred)
+qda.train.class <- qda.train.pred$class
+table(qda.train.class, Direction.test)
+# Overall correct prediction rate = (0 + 61) / 104 = 58.7%.  This is worse than both the logistic and LDA models.
+mean(qda.train.class == Direction.test)
+
+
+## Let's get weird
+dfnew <- df[ , -c(1, 8)]
+dfnew$lnVolume <- log(df$Volume)
+for (i in 1:5) {
+  dfnew[ , 8 + i] <- numeric(length(df[ , 1]))
+  dfnew[ , 8 + i] <- log(dfnew[ , i] + 20)
+}
+colnames(dfnew)[9:13] <- c("lnLag1", "lnLag2", "lnLag3", "lnLag4", "lnLag5")
+dfnew <- dfnew[ , c(1:5, 9:13, 6, 8, 7)]
+## Logistic experimentation
+log.train.model2 <- glm(Direction ~ ., data = dfnew[ , -c(1:5, 11)], family = binomial, subset = train)
+summary(log.train.model2)
+
+# library(bestglm)
+# best.models <- bestglm(df[ , -c(1, 8)], family = binomial, IC = "CV")
+# best.models$Subsets
+df.test2 <- dfnew[!train, ]
+Direction.test2 <- df.test2$Direction[!train]
+  
+log.train.probs2 <- predict(log.train.model2, df.test2[ , -c(1:5, 11)], type = "response")
+log.train.pred2 <- rep("Down", 104)
+log.train.pred2[log.train.probs2 > 0.5] <- "Up"
+table(log.train.pred2, Direction.test2)
+
+## LDA experimentation
+lda.train.model2 <- lda(Direction ~ Today, data = df, subset = train)
+lda.train.model2
+lda.train.pred2 <- predict(lda.train.model2, df.test)
+names(lda.train.pred2)
+# The LDA and logistic regression predictions are almost identical.
+lda.train.class2 <- lda.train.pred2$class
+table(lda.train.class2, Direction.test)
+
+## QDA experimentation
+qda.train.model2 <- qda(Direction ~ Lag1 + Volume, data = df, subset = train)
+qda.train.model2
+qda.train.pred2 <- predict(qda.train.model2, df.test)
+names(qda.train.pred2)
+qda.train.class2 <- qda.train.pred2$class
+table(qda.train.class2, Direction.test)
+
+
+
+dim(df[!train,])
+
+df.test <- df[!train, ]
+
+```
+

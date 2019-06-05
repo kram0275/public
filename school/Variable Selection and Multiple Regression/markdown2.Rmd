@@ -1,0 +1,537 @@
+---
+title: "Data Analysis Report 2"
+author: "Will Kramlinger"
+date: "January 20, 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+<style>
+body {
+text-align: justify}
+</style>
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Introduction
+
+The adequacy of a prescribed linear model for a simulated data set comprising
+sales of child car seats and associated predictors was analyzed.  Given this 
+model, the data set was subject to residual analyses intended to identify 
+possible influential points, detect and repair any instances of 
+multicollinearity, and gauge the need for variable transformations.
+
+The analysis is guided heavily by two example labs provided by Professor Talih, 
+as well as a model building strategy outlined in the STAT 501 Online Notes:
+<https://newonlinecourses.science.psu.edu/stat501/node/335/>.
+
+## Data
+
+The data set analyzed was the **Carseats** data set included in the R package 
+**ISLR**.  The set includes observations for sales of child car seats at 400 
+different stores and 10 predictors.  The predictors included continuous variables
+**CompPrice**, **Income**, **Advertising**, **Population**, **Price**, **Age**, 
+and **Education**.  Categorical predictors were **ShelveLoc**, **Urban**, and
+**US**.
+
+For variable definitions, please refer to 
+<https://www.rdocumentation.org/packages/ISLR/versions/1.2/topics/Carseats>. 
+The following shall presume the reader's familarity with the variable names and
+their meanings, as they are used interchangeably.  A check for missing data 
+within the set revealed no problems.  
+
+The aforementioned variable **ShelveLoc** was found to be a categorical variable 
+with 3 possible levels: "Bad", "Medium", and "Good". The variable was then 
+re-coded by splitting into two new variables, **ShelveLocMedium** and 
+**ShelveLocGood**, where **ShelveLocMedium** = 1 if "Medium" and 0 otherwise; 
+**ShelveLocGood** = 1 if "Good" and 0 otherwise.  The response "Bad" thus became 
+the reference level.  The other categorical (binary) variables, **Urban** and 
+**US** were also re-coded as 1 for a "Yes", and 0 for "No" for ease of 
+visualization and interpretation.  Histograms for all variables are shown as 
+Fig. 1.
+
+## Analyses
+
+*-LINE Assumptions*
+
+An initial linear model which included all of the predictors (henceforth 
+*full.model*) was generated for the response **Sales**. Residual diagnostics 
+were performed to identify possible outliers and to investigate possible 
+severe assumptions of the OLS regression model. A 4-in-1 residual plot is 
+presented as Fig. 2.  The assumption of normally distributed residuals was
+confirmed via visual inspection of the normality plot and histograms, and also 
+via Anderson-Darling normality test (*AD* = 0.19, p-value = 0.9).  The 
+assumption of independent residuals was confirmed by a combination of the 
+residuals vs. order plot in Fig. 2 and also via plots of ACF and PACF vs. lag 
+for the **Sales** data, shown as Fig. 3.  The assumption of a linear function 
+was deemed satisfied via visual inspection of the residuals vs. fits plot; while
+the assumption of equal variance of the residuals was considered suspect via 
+visual inspection of the same plot, the concerns were mitigated via 
+Breusch-Pagan heteroskedasticity test (p-value = 0.7778).
+
+*-Outliers, High Leverages, and Influential Points*
+
+The residuals were more closely examined to investigate potential outliers. 
+Based on Prof. Talih's guidance, the criterion used to flag potential outliers 
+was to flag if the absolute value of the residual exceeded 3 times the residual 
+standard error (*s* = 1).  Based on this criterion, observation 358 (*e* = 3.41) 
+was noted as an outlier and a possible influential point.
+
+The leverages of all observations were examined to investigate high leverage 
+values.  Visual inspection of a plot of leverages vs. order revealed that 
+observation 311 was possibly a high leverage and influential, point.  The 
+quantitative criterion used to flag high leverage values was to flag the *i*th 
+observation as a high leverage value if its corresponding hat value exceeded
+$\frac{2k}{n} = \frac{2(12)}{400} = 0.06$.  With this threshold, observations 43 
+(*h* = 0.076) and 311 (*h* = 0.064) were flagged as high leverage values.
+
+Evaluation of potential influential points was conducted based on examination of 
+Cook's distances, *d*, using a criterion of: if *d* > 1, then influential.  
+Application of this criterion yielded no influential points; the maximum value 
+found was *d* = 0.0304 (observation 357).  Because of these findings, 
+**the decision was made to continue without removing any data points**.
+
+As a final check on this decision, a linear model was generated akin to 
+*full.model* but excluding the previously flagged observations 358, 43, and 311.
+The regression output for this model is presented as Table 2. The differences 
+between models were minimal, with the exception of a ~50% shift in the 
+coefficient for **US**, which decreased from -0.184 to -0.243. The potential 
+implications of this finding are addressed in the Variable Selection section 
+below.
+
+*-Multicollinearity*
+
+Scatterplot and correlation matrices were generated to investigate potential 
+collinearity between predictors, though only correlation values between 
+continuous predictors were considered.  Visual inspection of the scatterplot 
+matrix provided two signs of possible collinearity amongst the predictors. 
+**CompPrice** and **Price** were non-trivially positively correlated via plot; 
+however, the correlation value of *r* = 0.585 did not raise much concern. Also, 
+a plot of **Advertising** vs. **US** revealed a statistically significant 
+difference in mean advertising budgets between non-US and US stores at 95% 
+confidence; the average advertising budget in US stores was found to be 
+between 8.73K and 10.28K greater than those outside of the US.  Plots of these 2
+pairs of variables are shown as Fig. 4.
+
+Examination of the variance inflation factors (VIFs) for the continuous 
+variables in *full.model* corroborated the findings from scatterplot/correlation 
+matrices; these VIFs are presented as Table XX.  The maximum values were found 
+for **Advertising** (VIF = 2.103), **CompPrice** (VIF = 1.555), and **Price** 
+(VIF = 1.537).  Via Prof. Talih's discussion and STAT 501 education, these 
+values are nothing to worry about as they do not approach 5 or 10. The condition 
+number for *full.model* was found to be 6.7, which was far away from the 
+threshold of 30 mentioned via Discussion Board.
+
+As a final check for multicollinearity, simple linear regression (SLR) models were 
+generated for **Sales**  regressed on each one of the predictors.  Coefficients, 
+standard errors, and test statistics were compared to those from *full.model*.
+Significant differences between *full.model* and each respective variable's SLR 
+model were found for **CompPrice**, **Price**, **ShelveLocMedium**, **Urban**, 
+and **US** in terms of regression coefficients.  Additionally, the significance 
+of the predictors, at 95% confidence, differed for **CompPrice**, 
+**ShelveLocMedium** (significant in *full.model*, not in SLR), and **US** 
+(significant in SLR, not in *full.model*).
+
+*-Variable Selection and Model Refinement*
+
+Before elimination of variables, all possible two-way interaction effects were 
+considered in a new model (hence *int.full.model*).  At 95% confidence, only 2 
+significant interactions were found: **CompPrice:Income** and **Age:US**. Because 
+they were not found to be significant in *full.model*, nor in their own SLR 
+models, nor the current *int.full.model*, the predictors **Population**, 
+**Education**, and **Urban** were eliminated from the model as they were 
+found to be extraneous variables.  
+
+Best subsets regression was carried out using both the Mallows $C_p$ and BIC 
+criteria, which suggested that the optimal number of predictors was 7 and that 
+**US** should be omitted from the final model, which correlates with the 
+previous discussion above concerning the instability of the **US** coefficient. 
+Interactions were explored to little success. A candidate model 
+(*trimmed.model*) thus emerged with **CompPrice**, **Income**, **Advertising**, 
+**Price**, **ShelveLocMedium**, **ShelveLocGood**, and **Age** as predictors.
+
+Based on intuition, the previous VIF for *full.model*, and the visual positive 
+correlation between **Price** and **CompPrice**, a new variable **PriceDiff** 
+was calculated as $PriceDiff = Price - CompPrice$.  A new model was then re-fit 
+with **PriceDiff** and excluding its two component variables; results were 
+quite positive. The subsequent candidate model (*price.diff.model*) emerged with 
+**PriceDiff**, **Income**, **Advertising**, **Price**, **ShelveLocMedium**, 
+**ShelveLocGood**, and **Age** as predictors.
+
+The selected model was *price.diff.model* due to the improvements observed in 
+the reduction in the VIFs and standard errors of the coefficients. The chosen 
+model is  
+$Sales = 5.113 - 0.095(PriceDiff) + 0.016(Income) + 0.116(Advertising)$ 
+$+ 1.949(ShelveLocMedium) + 4.831(ShelveLocGood) - 0.046(Age)$.
+
+## Plots and Tables
+
+```{r Load, echo = FALSE, results = "hide", message = FALSE}
+options(digits=4)
+library(ISLR)
+library(car)
+library(nortest) # Has Anderson-Darling test function
+library(olsrr) # Has multiple residual tests
+library(forecast) # ACF, PACF generator
+library(MASS) # Has Box-Cox transformation function to test for power law
+rm(list = ls()) # Clear variable space
+df <- Carseats  # Copy over data and rename for less typing
+```
+
+```{r fullsummary, echo = FALSE, results = "hide"}
+## summary(df) # Reveals ShelveLoc has 3 classes
+# Re-assign dummy variables for ShelveLoc for regression ease of interpretation 
+# and good practice.  "Bad" becomes the reference level.
+df$ShelveLocGood <- numeric(length(df[ , 1]))
+df$ShelveLocMedium <- numeric(length(df[ , 1]))
+df$ShelveLocGood[which(df$ShelveLoc == "Good")] <- 1
+df$ShelveLocMedium[which(df$ShelveLoc == "Medium")] <- 1
+# Also re-code the binary variables urban and US to [0, 1]
+df$numUrban <- numeric(length = length(df[ , 1]))
+df$numUrban[which(df$Urban == "Yes")] <- 1
+df$numUS <- numeric(length = length(df[ , 1]))
+df$numUS[which(df$US == "Yes")] <- 1
+df <- df[ , c(1:6, 13, 12, 8, 9, 14, 15)]
+colnames(df)[11:12] <- c("Urban", "US")
+table1 <- summary(df)
+names(dimnames(table1)) <- 
+  list("", 
+       "Table 1: 5 number summary and mean for each variable in Carseats dataset")
+table1
+```
+
+```{r Fig1 Hists, echo = FALSE}
+# Generate histograms for each variable to examine distributions
+par(mfrow = c(3, 4))
+for(i in 1:12) {
+  hist(df[ , i], xlab = colnames(df[i]), 
+       main = paste0("Histogram of ", colnames(df[i])))
+}
+# Normally distributed: Sales, CompPrice, Price
+# Skewed to the right: Education, Advertising
+# Balanced: Age, Population, Income
+```
+
+Fig. 1: Histograms for the variables in the Carseats data set with slightly 
+modified variables
+
+
+Table 1: Summary of linear model *(full.model)* for variable **Sales** regressed 
+on 11 predictors.  Results reveal **CompPrice**, **Income**, **Advertising**, 
+**Price**, **ShelveLocMedium**, **ShelveLocGood**, and **Age** are significant 
+linear predictors of **Sales** given the presence of all other predictors.
+```{r Table1 fulllmsummary, echo = FALSE}
+# Generate full model with all predictors included
+full.model <- lm(df$Sales ~ ., data = df)
+table2 <- summary(full.model)
+table2
+```
+
+
+
+```{r Table3 ANOVA, echo = FALSE, results = "hide"}
+# Generate full model with all predictors included
+anova(full.model)
+```
+
+
+```{r Fig2 4in1, echo = FALSE}
+# Generate 4-in-1 residuals plot
+par(mfrow = c(2, 2))
+qqnorm(full.model$residuals, main = "Normal Probability Plot of Raw Residuals")
+qqline(full.model$residuals)
+plot(fitted(full.model), rstudent(full.model), xlab = "Fitted Values",
+     ylab = "Studentized Residuals", 
+     main = "Studentized Residuals vs. Fitted Values")
+abline(h = 0)
+hist(full.model$residuals, xlab = "Raw Residuals", 
+     main = "Histogram of the Residuals")
+plot(full.model$residuals ~ seq(1:400), xlab = "Order", ylab = "Raw Residuals", 
+     main = "Raw Residuals vs. Order")
+lines(full.model$residuals ~ seq(1:400))
+```
+
+Fig. 2: Residual diagnostic plots for *full.model*. The plots all indicate 
+the validity of the LINE assumptions for applying regression to this data set, 
+and did not suggest mandatory variable transformations.  Plots for subsequent 
+models remained similarly well-behaved.
+
+
+```{r Fig3 ACF, echo = FALSE}
+library(forecast)
+par(mfrow = c(1, 2))
+acf(df$Sales, main = "ACF for Sales", 
+    sub = "95% confidence intervals in blue")
+pacf(df$Sales, main = "PACF for Sales",
+     sub = "95% confidence intervals in blue")
+```
+
+Fig 3: ACF and PACF vs. Lag plots for **Sales**. The plots corroborate the 
+residuals vs. order plot in Fig. 2 in suggesting no violation of the 
+independent residuals assumption.
+
+Table 2: Regression output for *full.model* without 3 points flagged as 
+possibly influential.  Upon comparison with Table 1, there are minor 
+differences save for evidence of possible instability in the **US** coefficient.
+```{r Table2 NoInfluencers, echo = FALSE}
+infl.df <- df[-c(43, 311, 358), ]
+infl.full.model <- lm(infl.df$Sales ~ ., data = infl.df)
+summary(infl.full.model)
+```
+
+```{r Fig4 predictorCorr, echo = FALSE}
+par(mfrow = c(1,2))
+plot(df$Advertising ~ df$US, xlab = "US (0 = non-US, 1 = in US)", 
+     ylab = "Advertising Budget($1000)")
+plot(df$CompPrice ~ df$Price, xlab = "Price ($)", ylab = "Competitor Price ($)")
+```
+
+Fig. 4: Plots of **Advertising** vs. **US** and **CompPrice** vs. **Price**. 
+After inspecting correlation and scatterplot matrices, these two variable pairs 
+raised most concerns about collinearity and/or redundant variables.
+
+```{r Fig5 subsets, echo = FALSE, message = FALSE}
+library(leaps)
+library(lmtest)
+trimmed.df <- df[ , c(1:4, 6:9, 12)]
+sub.fit<-regsubsets(Sales~.,trimmed.df)
+best.summary<-summary(sub.fit)
+# Assess via Mallows Cp
+par(mfrow=c(1,2))
+plot(best.summary$cp, ylab = "Cp")
+plot(sub.fit,scale = "Cp")# Suggests that a 7 predictor model is optimal
+```
+
+Fig.5: Plots of $Cp$ vs. *p* and $C_p$ vs. Predictors Included for 
+*trimmed.model*. Plots used for best subsets regression and suggest the 
+inclusion of 7 non-intercept predictors.
+
+
+Table 3: Regression output for *price.diff.model* which was chosen as the final 
+model.
+```{r Table3 bigwinner, echo = FALSE}
+price.diff.df <- df
+price.diff.df$PriceDiff <- price.diff.df$Price - price.diff.df$CompPrice
+price.diff.df <- price.diff.df[ , c(1, 13, 3:5, 7:12)]
+price.diff.model <- lm(price.diff.df$Sales ~ . - Population - Education - 
+                         Urban - US, data = price.diff.df)
+summary(price.diff.model)
+```
+
+
+## Conclusions
+
+A simulated data set comprising carseat sales at 400 different stores along with 
+10 predictors (7 continuous, 3 categorical) was analyzed for influential points, 
+multicollinearity, and necessary variable transformations. The set had no 
+missing values but required a re-coding of a predictor with 3 levels. Residual 
+analysis suggested that the LINE assumptions were satisfied, no data 
+transformations were drastically needed, and also revealed a few possible 
+outliers. Leverages and Cook's distances were calculated to investigate 
+influential points; based on these calculations, the decision was made to not 
+eliminate any observations. Collinearity amongst the predictors was investigated 
+via scatterplot and correlation matrices, VIFs, and condition numbers; no 
+severe violations were found. Pairwise interactions were investigated to 
+eliminate extraneous variables. Candidate models were evaluated via best 
+subsets regression based on $C_p$ and BIC while also monitoring coefficient 
+stability and VIF. The final model chosen included 6 predictors and included no 
+interactions: **PriceDiff**, **Income**, **Advertising**, **ShelveLocMedium**, 
+**ShelveLocGood**, and **Age**.
+
+## Appendix I: R Code
+
+The following code has not been edited for cleanliness and supplements that 
+which is found in the Plots and Tables section.
+
+```{r MissingVals, results = "hide"}
+which(is.na(df) == TRUE) # Locates missing values, if any; returned 0 (NULL)
+```
+
+```{r Categorical, results = "hide"}
+length(which(df$Urban == 1)) / 400 ## 282/400 = 70.5% are Urban
+length(which(df$US == 1)) / 400 ## 258/400 = 64.5% are US
+```
+
+```{r ttest}
+t.test(df$Advertising[df$US == 1], df$Advertising[df$US == 0] )
+# Significant differences between US and non-US advertisting budgets
+```
+
+
+```{r LINE, results = "hide"}
+# Test for normality with Anderson-Darling
+ad.test(full.model$residuals) # AD = 0.19, p-value = 0.9
+# Test for equal variances with Breusch-Pagan
+ols_test_breusch_pagan(full.model) # p-value = 0.7775
+```
+
+```{r Outliers, results = "hide"}
+## summary(full.model) # residual standard error = 1
+## anova(full.model) # Reveals significant predictors include CompPrice, Income,
+# Advertising, Price, ShelveLoc, and Age IN FULL MODEL
+# Compare min and max residuals to 3 times the S.E.(res) as seen in example
+plot.new()
+min.res <- min(full.model[[2]])
+max.res <- max(full.model[[2]])
+abs(min.res) > 3; abs(max.res) > 3
+which(abs(full.model$residuals) > 3) # Observation 358 may be outlier/influential
+
+res.df <- data.frame(raw = resid(full.model), stud = rstudent(full.model))
+## identify(fitted.values(full.model), rstudent(full.model), 
+##         labels = row.names(df)) # Observation 358 may be outlier/influential
+outlierTest(full.model) # Confirms observation 358
+
+# Check observations vs. fits
+plot(fitted.values(full.model), df$Sales)
+abline(a = 0, b = 1)
+
+# Investigate the predictor levels of observation 358
+df[358,]  # No immediately concerning predictor levels
+
+# Investigate high leverage points
+res.df$lev <- hatvalues(full.model)
+par(mfrow = c(1,1))
+plot(res.df$lev, xlab = "Observation Number", ylab = "Leverage")
+## identify(res.df$lev)  # Observation 311 may be high leverage
+lev.thresh <- 2 * sum(hatvalues(full.model)) / nrow(df)
+which(hatvalues(full.model) > lev.thresh) # Returns observations 43, 311
+
+# Investigate Cook's distances for influential points
+res.df$cooks <- cooks.distance(full.model)
+plot(res.df$cooks, xlab = "Observation Number", ylab = "Cook's Distance")
+which(res.df$cooks > 1) # Returns 0
+```
+
+```{r Multi, results = "hide"}
+# Check for multicollinearity amongst predictors
+pairs(df) # Inspection of scatterplot matrix does not reveal obvious collinearity
+# in the data set, with the possible exception of CompPrice ~ Price
+cor(df)
+```
+
+```{r VIF, condition, results = "hide"}
+vif(full.model)  # No VIFs exceed 5 (investigation warranted) nor 10 (fix
+# immediately), as taught in STAT 501
+# Try the condition number method as explained by Example 2
+X <- model.matrix(full.model)
+Z <- X[ , -1]
+Z <- scale(Z)
+M <- t(Z) %*% Z
+eigen(M)
+talih.cond.number <- max(eigen(M)$values) / min(eigen(M)$values)
+wiki.cond.number <- sqrt(max(eigen(M)$values) / min(eigen(M)$values))
+# Regardless of cond.number calculation, multicollinearity does not seem to
+# be too much of a worry
+```
+
+```{r SLR, results = "hide"}
+# Examine each SLR
+slr.stats <- matrix(numeric(), nrow = 22, ncol = 4)
+colnames(slr.stats) <- colnames(summary(full.model)$coefficients)
+for (i in 1:11) {
+  temp.model <- lm(df$Sales ~ df[ , (i + 1)] )
+  slr.stats[(2*i - 1), ] <- summary(temp.model)$coefficients[1, ]
+  slr.stats[2*i, ] <- summary(temp.model)$coefficients[2, ]}
+slr.stats <- as.data.frame(slr.stats)
+row.names(slr.stats)[2*(1:11) - 1] <- paste0(colnames(df)[2:12], " Intercept")
+row.names(slr.stats)[2*(1:11)] <- colnames(df)[2:12]
+round(slr.stats, 4) 
+# SLRs indicate that Income, Advertising, Price, 
+# ShelveLocGood, Age, and US are significant linear predictors IN SLR MODELS
+### THIS DIFFERS FROM FULL MODEL: CompPrice, ShelveLocMedium are not included
+### while US is included
+
+### The variables which are not significant in both the full and SLR models are:
+### Population, Education, and Urban.  Likely OK getting rid of these variables.
+```
+
+```{r interactions, results="hide"}
+# Screw around with interactions
+int.full.model <- lm(df$Sales ~ .^2, data = df)
+summary(int.full.model)
+which(summary(int.full.model)$coefficients[ , 4] < 0.05) # Extracts p-values
+# Indicates that CompPrice:Income and Age:numUS are significant interactions
+anova(int.full.model)
+# Generate new model with only those 2 interactions
+int2.model <- lm(df$Sales ~ . + df$CompPrice:df$Income + df$Age:df$US,
+                 data = df)
+summary(int2.model);
+summary(full.model)
+
+round(summary(full.model)$coefficients, 3)
+round(summary(int2.model)$coefficients, 3)
+
+# Remove non-significant predictors from int2.model
+int3.model <- lm(Sales ~ . + CompPrice:Income + Age:US - 
+                   Population - Education - Urban,
+                 data = df)
+round(summary(int3.model)$coefficients, 3)
+summary(int3.model)
+vif(int3.model) # Wayyyyyyyy too high
+plot(int3.model$residuals ~ int3.model$fitted.values)
+
+# Remove US?
+int4.model <- lm(Sales ~ .^2,
+                 data = trimmed.df)
+summary(int4.model)
+plot(int4.model$residuals ~ int4.model$fitted.values)
+summary(int4.model) # Still probably not a good idea.  Go back to int3.model.
+
+price.diff.df <- df
+price.diff.df$PriceDiff <- price.diff.df$Price - price.diff.df$CompPrice
+price.diff.df <- price.diff.df[ , c(1, 13, 3:5, 7:12)]
+price.diff.model <- lm(price.diff.df$Sales ~ ., data = price.diff.df)
+pairs(price.diff.df)
+summary(price.diff.model)
+vif(price.diff.model)
+vif(full.model)
+par(mfrow = c(1,1))
+plot(price.diff.model$residuals ~ price.diff.model$fitted.values)
+
+# Check out new price diff with trimmed variables
+price.trimmed.df <- price.diff.df[ , c(1:4, 6:8, 11)]
+price.trimmed.model <- lm(Sales ~ .,
+                 data = price.trimmed.df)
+summary(price.trimmed.model)
+vif(price.trimmed.model) # Has US still in
+
+# Check out interactions
+price.trimmed.model2 <- lm(Sales ~ .^2, data = price.trimmed.df)
+summary(price.trimmed.model2)
+# Age:US, ShelveLocGood:US, Income:Advertising
+
+# Check out interactions
+price.trimmed.model3 <- lm(Sales ~ . + Age:US + ShelveLocGood:US + 
+                             Income:Advertising, data = price.trimmed.df)
+summary(price.trimmed.model3)
+vif(price.trimmed.model3) # Things get whacky!!!  Exclude int's except US:Shelve
+
+price.trimmed.model4 <- lm(Sales ~ . + ShelveLocGood:US, data = price.trimmed.df)
+summary(price.trimmed.model4)
+vif(price.trimmed.model4) # Not bad...US:ShelveLocGood and ShelveLocGood are a bit high
+
+price.trimmed.model5 <- lm(Sales ~ . - US, data = price.trimmed.df)
+summary(price.trimmed.model5)
+vif(price.trimmed.model5) # Pretty good without US.  Now try without ShelveLocGood
+
+price.trimmed.model6 <- lm(Sales ~ . - ShelveLocGood, data = price.trimmed.df)
+summary(price.trimmed.model6)
+vif(price.trimmed.model6) # NO.  Need to leave ShelveLocGood in.
+
+# Not PRICEDIFF
+trimmed.df <- df[ , c(1:4, 6:9, 12)]
+full.model.trimmed <- lm(Sales ~ ., data = trimmed.df)
+summary(full.model.trimmed)
+vif(full.model.trimmed)
+
+full.model.trimmed2 <- lm(Sales ~ .^2, data = trimmed.df)
+summary(full.model.trimmed2)
+
+full.model.trimmed3 <- lm(Sales ~ ., data = trimmed.df)
+summary(full.model.trimmed3)
+vif(full.model.trimmed3)
+# Got rid of Advertising:Price
+```
+

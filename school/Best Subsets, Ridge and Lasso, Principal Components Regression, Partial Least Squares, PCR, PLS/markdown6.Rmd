@@ -1,0 +1,428 @@
+---
+title: "Data Analysis Report 6"
+author: "Will Kramlinger"
+date: "Feb. 17, 2019"
+output: 
+  html_document:
+    code_folding: hide
+    toc: TRUE
+    toc_depth: 3
+    toc_float: TRUE
+    fig_caption: true
+    theme: spacelab
+---
+<style>
+body {
+text-align: justify}
+</style>
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Introduction
+Exploratory data analysis (EDA) was conducted on a data set comprising 777 observations on 18 variables for US Colleges from the 1995 issue of US News and World Report.  The number of applications (**apps**) sent to each college was considered as a response variable; it and potential predictors were examined in order to gauge the necessity of data cleansing before model fitting via various regression techniques. Analyses compared the efficacy of best subsets, coefficient shrinkage methods (ridge, lasso), and dimension reduction techniques (principal components regression (PCR), partial least squares (PLS)). Models were evaluated based on a criterion of test MSE minimization using a 50:50
+train:test split; optimal tuning parameters for PCR and PLS were selected via 10-fold cross-validation.
+
+## Data
+The data set analyzed was the **College** data set included in the R package 
+**ISLR**.  The set includes observations for 777 colleges across 18 variables. 
+For variable definitions, please refer to  <https://rdrr.io/cran/ISLR/man/College.html>. 
+The following shall presume the reader's familarity with the variable names and
+their meanings, as they are used interchangeably.  A check for missing data 
+within the set revealed no problems.
+
+## Analyses
+
+#### Exploratory Data Analysis (EDA)
+
+Initial EDA included examining the distributions for each variable, along with pairwise correlation between variables via visual inspection of correlation and scatterplot matrices. High correlations between variable pairs were seen for **enroll-accept** ($\rho$ = 0.9116), **enroll-f.Undergrad** ($\rho$ = 0.9646), **top25perc-top10perc** ($\rho$ = 0.8920), and **phd-terminal** ($\rho$ = 0.8496). The variable pair **top25perc-top10perc** posed obvious collinearity problems, as it was inferred that all of the **top10perc** for each college, was also represented within the **top25perc**. A new variable **top75to90** was thus calculated as
+
+<center>
+
+$top75to90 = top25perc - top10perc$
+
+</center>
+
+and then substituted in as a replacement for **top25perc**. The correlation between **top10perc-top75to90** subsequently decreased to $\rho$ = 0.0028.
+
+An investigation of outliers and high leverage observations was also undertaken via residual diagnostic plots, which revealed that *Rutgers at New Brunswick* was an influential point; **this point was subsequently removed from analysis**, which brought the number of observations to *n* = 776.
+
+A histogram of the response variable **Apps** was found to be heavily skewed to the right, which suggested a variable transformation may be needed; this is discussed below. 
+
+#### Variable Transformation and Selection
+
+An initial linear model was generated, which comprised **apps** regressed on all 17 predictors. This model provided a relatively strong fit, giving $\hat\sigma = 1041, R^2_a = 92.76$. However, as mentioned above, inspection of the residual plots revealed severe violations of the linearity, equal variances, and normality assumptions; these plots are shown as Fig. 1. Additionally, numerous variables showed worrisome variance inflation factors (VIFs): **accept** (VIF = 7.14), **enroll** (VIF = 21.36), and **f.undergrad** (VIF = 18.02). A new model was created without the latter two variables, which was deemed justifiable due to the aforementioned high correlations between them and the variable **accept** which was left in the model. The VIFs for this model were all below 5, and problems with multicollinearity were deemed resolved. **The amount of predictors thus decreased from 17 to 15**.
+
+In response to these problems, possible transformations on the response were examined via Box-Cox transformation. Using the *boxCox()* function within the **car** package, the optimal $\lambda$ was found to be $0.\bar{50}$, which was simplified to $\lambda = 0.50$. The new response variable used for subsequent model fitting was thus $\sqrt{apps}$.
+
+After the improvements were observed due to the response transformation, transformations on the predictor variables were not considered to maintain model interpretability.
+
+#### Best Subsets, Ridge, Lasso
+
+Using the transformed response and all 15 of the candidate predictor variables, best subsets regression was conducted using the *regsubsets()* function within the **leaps** package. **Based on a criterion of prediction error minimization, the optimal number of variables was found to be 11.** The test MSE for this method was found to be $MSE = 79.4125$.
+
+Ridge and Lasso regression were conducted using the *glmnet()* function within the **glmnet** package. Tuning parameters were selected using 10-fold cross-validation via the *cv.glmnet()* function. The test MSE for ridge regression was found to be $MSE = 81.7738$. The test MSE for lasso regression was found to be $MSE = 80.8399$, with 13 variables; excluded variables included *terminal* and *outstate*.
+
+#### Principal Components Regression (PCR)
+
+Using the transformed response and all 15 of the candidate predictor variables, PCR was conducted using the *pcr()* function within the **pls** package according to the steps outlined in the textbook. By default, the function standardizes all predictor levels and conducts 10-fold cross-validation (CV) for each possible value of $M$ components. **Based on a criterion of prediction error minimization, the optimal number of components for PCR was found to be $M = 12$.** The test MSE for this method was found to be $MSE = 81.7806$.
+
+#### Partial Least Squares (PLS)
+
+PLS was conducted using the *plsr()* function within the **pls** package according to the steps outlined in the textbook. The function also performs the predictor standardization and CV steps, as mentioned for PCR. **Based on a criterion of prediction error minimization, the optimal number of components for PLS was found to be $M = 6$**. The test MSE found via PLS was found to be $MSE = 80.3527$, which was a bit lower than that found for PCR.
+
+#### Discussion
+
+While the minimum prediction errors between PCR and PLS did not greatly differ, of note is that PLS was ultimately able to achieve a smaller test MSE using a smaller number of components. This difference in performance is not wholly unexpected, as PLS utilizes information from the response variable in its identification of principal components, while PCR does not.
+
+Contrary to previous weeks' analyses, PCA methods performed comparably to the coefficient shrinkage methods. Just as poorer performance of PCA was previously attributed to information loss due to dimension reduction and inability to remove irrelevant data, comparable performance between these methods suggests that the pre-analysis variable selection and transformations were largely effective.
+
+Throughout the comparison of best subsets, shrinkage, and PCA techniques, and by employing 50:50 set validation, the best model was found to be an 11-predictor model selected via best subsets regression:
+
+<center>
+$\sqrt(apps) = -5.546\cdot10^{-2} - 9.888(private) + 8.477\cdot10^{-3}(accept) + 0.2170(top10perc)$ 
+$+ 6.982\cdot10^{-4}(p.undergrad)+ 1.427\cdot10^{-3}(room.board) - 4.370\cdot10^{-3}(books) - 2.705\cdot10^{-2}(phd)$ 
+$+ 0.5145(s.f.ratio) - 7.654\cdot10^{-2}(perc.alumni) + 6.840\cdot10^{-4}(expend)$
+$+ 0.1281(grad.rate)$
+  
+</center>
+  
+Of note in this model is the absence of the variable **terminal**, which was previously discussed as being strongly correlated with **phd**; the observation points to the ability of best subsets to weed out redundant information. The regression output for this model is found as Table 1.
+
+The performance of the methods (each method's test MSE) using different test:train splits is displayed as Fig. 1. The results show that, generally, the methods perform comparably with the exception of ridge regression, the plot of which deviates quite frequently from the other methods.  This is likely attributable to the fact that ridge does not perform variable selection nor dimension reduction, and points to the advantages of the other methods, assuming proper data cleaning.
+
+## Plots and Tables
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+## Clear variables and load data set
+rm(list = ls())
+library(MASS)
+library(ISLR)
+library(car) # Has VIF
+library(glmnet) # For ridge regression
+library(nortest) # Has Anderson-Darling
+library(olsrr) # Has Breusch-Pagan
+library(leaps)
+library(glmnet) # For Lasso, Ridge
+library(pls) # For PCA
+df <- College
+```
+
+
+```{r results = "hide"}
+# ?College
+str(df) # Private is binary, all others continuous numeric
+cor(df[ , 2:18])
+# pairs(df, cex = 0.5)
+# High corr (say, > 0.8): Enroll-Accept, Enroll-F.Undergrad, 
+# Top10perc-Top25Perc, PhD-Terminal
+summary(df) # Private has 565 / (565 + 212) = 72.71%
+names(df) <- tolower(names(df)) # For ease of use
+
+# for(i in 2:18) {
+#   hist(df[ , i], xlab = colnames(df)[i])
+# }
+# rm(i)
+# Normal: Grad Rate, S.F.Ratio (approx), Room.Board, Outstate, Top25perc
+# Skewed right: Expend, perc.alumni, Personal, Books (very long tail/outliers?),
+#               P.Undergrad, F.Undergrad, Top10perc, Enroll, Accept
+# Skewed left: Terminal, PhD
+
+full.model <- lm(apps ~ ., data = df)
+summary(full.model) # SE(res) = 1041, Adj R-Sq = 92.76
+vif(full.model) # accept, top10perc, top25perc > 5, enroll, f.undergrad > 10
+
+summary(lm(apps ~ . - enroll - f.undergrad, data = df))
+vif(lm(apps ~ . - enroll - f.undergrad, data = df))
+
+# Modify terminal and top25perc
+df$top75to90 <- df$top25perc - df$top10perc
+# df$nonphdterm <- df$terminal - df$phd
+df <- df[ , c(1:5, 7:19)] 
+# Re-run model with modified variables, and without enroll f.undergrad
+full.model2 <- lm(apps ~ . - enroll - f.undergrad, data = df)
+summary(full.model2) # SE(res) = 1062, Adj R-Sq = 92.47
+vif(full.model2) # Pretty reasonable
+# plot(full.model2)
+2*sqrt((19 + 1)/(777 - 19 - 1)) # DFFITs threshold = 0.3251
+which(dffits(full.model2) > 0.3251)
+which(cooks.distance(full.model2) > 1) # Returns Rutgers at New Brunswick
+# It seems very reasonable that Rutgers be taken out of the data
+which(row.names(df) == "Rutgers at New Brunswick") # Row 484
+df <- df[-484, ] # DELETE RUTGERS; New n = 776
+# Re-run model with no Rutgers
+full.model3 <- lm(apps ~ . - enroll - f.undergrad, data = df)
+summary(full.model3) # SE(res) = 979.4, Adj R-Sq = 92.25; best error thus far
+vif(full.model3) # About the same as VIF for 2
+# plot(full.model3)
+# Check out BoxCox
+# box.full3 <- boxCox(full.model3)
+# which(box.full3$y == max(box.full3$y)) # Returns 63
+# box.full3$x[63] # Returns 0.5050.....  Use SQRT transform!
+# Modify df$apps
+full.model4 <- lm(sqrt(apps) ~ . - enroll - f.undergrad, data =df)
+summary(full.model4) # SE(res) = 8.426, Adj R-Sq = 90.04
+vif(full.model4) # Pretty reasonable
+# plot(full.model4) 
+# Most worrisome is Purdue-West Lafayette, but not high leverage, low Cook's
+# distance
+# hist(sqrt(df$apps)) # Still a bit skewed right, but better
+# hist(log(df$apps)) # Significantly better than sqrt(apps)
+# Try log transform
+full.model5 <- lm(log(apps) ~ . - enroll - f.undergrad, data =df)
+summary(full.model5) # SE(res) = 0.5028, Adj R-Sq = 77.82
+vif(full.model5) # Pretty reasonable
+# plot(full.model5) 
+
+## Transform df to permanently exclude enroll and f.undergrad
+df <- df[ , -c(4, 6)]
+## Transform df to permanently have sqrt(apps) as response
+df$sqrt.apps <- sqrt(df$apps)
+df <- df[ , c(17, 1, 3:16)]
+
+best.model <- lm(sqrt.apps ~ . - outstate - terminal - top75to90 - personal, 
+                 data = df)
+summary(best.model)
+vif(best.model)
+
+save(df, file = "mod_df.rda")
+
+```
+
+```{r best.sub.model, message = FALSE, warning = FALSE}
+library(kableExtra)
+load("tabler_lm.Rda")
+table1 <- tabler.lm(best.model)
+table1 %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14, position = "center") %>% 
+  scroll_box(width = "100%", height = "250px")
+```
+Table 1: Regression output for 11-predictor model selected via best subsets. This model provided the lowest test MSE of all methods, holding the train:test data split constant.
+
+```{r results = "hide"}
+load(file = "mod_df.rda")
+library(leaps)
+library(glmnet)
+library(pls)
+
+mse.table <- matrix(nrow = 50, ncol = 6)
+colnames(mse.table) <- c("Least Squares", "Best Subsets", "Ridge", "Lasso", 
+                         "PCR", "PLS")
+
+for (i in 1:50) {
+  # Split the data set into a training set and a test set
+  set.seed(i) # Originally equal to 1
+  train=sample(1:nrow(df), nrow(df)/2)
+  test=(-train)
+  
+  y <- df$sqrt.apps
+  x <- model.matrix(sqrt.apps ~ ., data = df)[, -1]
+  
+  # Fit model using least-squares
+  ols.model <- lm(sqrt.apps ~ ., data = df[train, ])
+  ols.beta <- matrix(ols.model$coefficients)
+  # Calculate test responses
+  pred <- model.matrix(sqrt.apps ~ ., data = df)[test,] %*% ols.beta
+  mse.ols <- mean((df$sqrt.apps[test] - pred)^2) # OLS MSE = 74.27048
+  
+  # Use best subsets
+  regfit.best=regsubsets(sqrt.apps ~ . ,data=df[train, ], nvmax = 15)
+  best.test.mat=model.matrix(sqrt.apps ~ .,data=df[test,])
+  best.val.errors=rep(NA,15)
+  
+  for(j in 1:15){
+    coefi=coef(regfit.best,id=j)
+    pred=best.test.mat[,names(coefi)]%*%coefi
+    best.val.errors[j]=mean(((df$sqrt.apps[test] - pred)^2))
+  }
+  best.val.errors
+ 
+  mse.subsets <- best.val.errors[which(best.val.errors == min(best.val.errors))]
+  # Best subsets MSE = OLS MSE = 74.27048
+  
+  # Use ridge regression
+  grid=10^seq(10,-2,length=100)
+  ridge.mod=glmnet(x[train, ],y[train],alpha=0,lambda=grid, thresh=1e-12)
+  # Get optimal lambda
+  ridge.cv.out=cv.glmnet(x[train, ],y[train],alpha=0)
+
+  ridge.bestlam=ridge.cv.out$lambda.min
+  ridge.bestlam # Returns best lambda = 2.766425
+  # Get predictions and MSE
+  ridge.pred=predict(ridge.mod,s=ridge.bestlam,newx=x[test, ])
+  mse.ridge <- mean((ridge.pred-y[test])^2) # Returns Ridge MSE = 83.24518
+  
+  # Use lasso regression
+  lasso.mod=glmnet(x[train, ],y[train],alpha=1,lambda=grid)
+
+  set.seed(1)
+  # Get optimal lambda
+  lasso.cv.out=cv.glmnet(x[train, ],y[train],alpha=1)
+
+  lasso.bestlam=lasso.cv.out$lambda.min # Returns best lambda = 0.05960082
+  lasso.pred=predict(lasso.mod,s=lasso.bestlam,newx=x[test, ])
+  mse.lasso <- mean((lasso.pred-y[test])^2) 
+  # Returns Lasso MSE = 74.43312; lower than Ridge, almost as good as OLS
+  lasso.out=glmnet(x,y,alpha=1,lambda=grid)
+  lasso.coef=predict(lasso.out,type="coefficients",s=lasso.bestlam)[1:15,]
+  lasso.coef # Non-zero: ALL VARIABLES!
+  lasso.coef[lasso.coef!=0]
+  
+  # Use PCR
+  pcr.fit=pcr(sqrt.apps~., data=df,scale=TRUE,validation="CV")
+  # PCR standardizes the predictors with scale = TRUE, CV is 10-fold CV
+  # The resulting fit can be examined using summary()
+  summary(pcr.fit) # PCR M = 12 components for entire data set
+  # The CV scores are sqrt(MSE)!!!  To get MSE, we must square.
+  # We then perform PCR on the training data and evaluate its test performance.
+  set.seed(1)
+  pcr.fit=pcr(sqrt.apps ~., data=df,subset=train,scale=TRUE, validation="CV")
+  summary(pcr.fit) # PCR M = 14 components for test set fit
+  # We can also plot cross-validation scores using the validationplot() function.
+  # val.type = "MSEP" gives the cross-validation MSE plot
+  # validationplot(pcr.fit,val.type="MSEP")
+  pcr.pred=predict(pcr.fit,x[test,],
+                   ncomp=which(pcr.fit$validation$PRESS == 
+                                 min(pcr.fit$validation$PRESS)))
+  mse.pcr <- mean((pcr.pred-y[test])^2) 
+  # Returns PCR MSE = 74.292576; almost as good as least squares
+  
+  # We implement PLS using plsr()
+  set.seed(1)
+  pls.fit=plsr(sqrt.apps~., data=df,subset=train,scale=TRUE, validation="CV")
+  summary(pls.fit)
+  # validationplot(pls.fit,val.type="MSEP")
+  pls.pred=predict(pls.fit,x[test,],ncomp=which(pls.fit$validation$PRESS == 
+                                                  min(pls.fit$validation$PRESS)))
+  mse.pls <- mean((pls.pred-y[test])^2)
+  # Returns PLS MSE = 74.61448
+  
+  mse.table[i, 1] <- mse.ols
+  mse.table[i, 2] <- mse.subsets
+  mse.table[i, 3] <- mse.ridge
+  mse.table[i, 4] <- mse.lasso
+  mse.table[i, 5] <- mse.pcr
+  mse.table[i, 6] <- mse.pls
+}
+
+save(mse.table, file = "mse_table.rda")
+plotdf <- data.frame(mse.table)
+```
+
+```{r fig.align="center"}
+plot(plotdf$Least.Squares ~ seq(1:50), type = "l", col = "black", 
+     xlab = "setseed() for Test:Train Split", ylab = "Test MSE")
+lines(plotdf$Best.Subsets, col = "red")
+lines(plotdf$Ridge, col = "orange")
+lines(plotdf$Lasso, col = "green")
+lines(plotdf$PCR, col = "blue")
+lines(plotdf$PLS, col = "purple")
+legend("topright", 
+       legend = colnames(plotdf),
+       col = c("black", "red", "orange", "green", "blue", "purple"),
+       pch = "l", 
+       horiz = FALSE)
+
+```
+  
+Fig. 1: Test MSE vs. *x*, where x is the input parameter of setseed() used for splitting the data set into training and test sets. The performance of all methods remains similar except for ridge regression, which does not perform variable selection or dimension reduction.
+
+## Conclusions
+
+EDA, best subsets, regression shrinkage techniques, and PCA was applied on the College data set using the variable **apps** as the response. Based on the results of EDA and initial modeling, the response was transformed via Box-Cox with parameter $\lambda = 0.5$; i.e., the response was transformed via square root. One influential point was also removed. Test errors derived from 50:50 cross validation were compared for all methods. In order of lowest (best) to highest (worst) errors, the methods ranked as follows: best subsets, PLS, ridge, lasso, and PCR. Different train:test splits were also investigated using the same methods.
+
+## Appendix I: R Code
+
+The following code supplements that found above and has not been edited for cleanliness.
+
+```{r message = FALSE, warning = FALSE}
+
+#### Move forward with full.model4 (sqrt(y), no enroll, no f.undergrad)
+library(leaps)
+# Split the data set into a training set and a test set
+set.seed(1) # Originally equal to 1
+train=sample(1:nrow(df), nrow(df)/2)
+test=(-train)
+
+y <- df$sqrt.apps
+x <- model.matrix(sqrt.apps ~ ., data = df)[, -1]
+
+# Fit model using least-squares
+ols.model <- lm(sqrt.apps ~ ., data = df[train, ])
+ols.beta <- matrix(ols.model$coefficients)
+# Calculate test responses
+pred <- model.matrix(sqrt.apps ~ ., data = df)[test,] %*% ols.beta
+mse.ols <- mean((df$sqrt.apps[test] - pred)^2) # OLS MSE = 80.21417
+
+# Use best subsets
+regfit.best=regsubsets(sqrt.apps ~ . ,data=df[train, ], nvmax = 15)
+best.test.mat=model.matrix(sqrt.apps ~ .,data=df[test,])
+best.val.errors=rep(NA,15)
+
+for(j in 1:15){
+  coefi=coef(regfit.best,id=j)
+  pred=best.test.mat[,names(coefi)]%*%coefi
+  best.val.errors[j]=mean(((df$sqrt.apps[test] - pred)^2))
+}
+best.val.errors
+
+mse.subsets <- best.val.errors[which(best.val.errors == min(best.val.errors))]
+# Best subsets MSE = 79.41252
+
+# Use ridge regression
+grid=10^seq(10,-2,length=100)
+ridge.mod=glmnet(x[train, ],y[train],alpha=0,lambda=grid, thresh=1e-12)
+# Get optimal lambda
+ridge.cv.out=cv.glmnet(x[train, ],y[train],alpha=0)
+
+ridge.bestlam=ridge.cv.out$lambda.min
+ridge.bestlam # Returns best lambda = 2.64715
+# Get predictions and MSE
+ridge.pred=predict(ridge.mod,s=ridge.bestlam,newx=x[test, ])
+mse.ridge <- mean((ridge.pred-y[test])^2) # Returns Ridge MSE = 81.77377
+
+# Use lasso regression
+lasso.mod=glmnet(x[train, ],y[train],alpha=1,lambda=grid)
+
+set.seed(1)
+# Get optimal lambda
+lasso.cv.out=cv.glmnet(x[train, ],y[train],alpha=1)
+
+lasso.bestlam=lasso.cv.out$lambda.min # Returns best lambda = 0.15869
+lasso.pred=predict(lasso.mod,s=lasso.bestlam,newx=x[test, ])
+mse.lasso <- mean((lasso.pred-y[test])^2) 
+# Returns Lasso MSE = 80.83988; lower than Ridge, slightly better than OLS
+lasso.out=glmnet(x,y,alpha=1,lambda=grid)
+lasso.coef=predict(lasso.out,type="coefficients",s=lasso.bestlam)[1:15,]
+lasso.coef 
+lasso.coef[lasso.coef!=0] # Non-zero: terminal, outstate
+
+# Use PCR
+# The CV scores are sqrt(MSE)!!!  To get MSE, we must square.
+# We then perform PCR on the training data and evaluate its test performance.
+set.seed(1)
+pcr.fit=pcr(sqrt.apps ~., data=df,subset=train,scale=TRUE, validation="CV")
+summary(pcr.fit) # PCR M = 12 components for train set fit
+# We can also plot cross-validation scores using the validationplot() function.
+# val.type = "MSEP" gives the cross-validation MSE plot
+validationplot(pcr.fit,val.type="MSEP")
+pcr.pred=predict(pcr.fit,x[test,],
+                 ncomp=which(pcr.fit$validation$PRESS == 
+                               min(pcr.fit$validation$PRESS)))
+mse.pcr <- mean((pcr.pred-y[test])^2) 
+# Returns PCR MSE = 81.78060; almost as good as least squares
+
+# We implement PLS using plsr()
+set.seed(1)
+pls.fit=plsr(sqrt.apps~., data=df,subset=train,scale=TRUE, validation="CV")
+summary(pls.fit) # PLS M = 6 comps
+validationplot(pls.fit,val.type="MSEP")
+pls.pred=predict(pls.fit,x[test,],ncomp=which(pls.fit$validation$PRESS == 
+                                                min(pls.fit$validation$PRESS)))
+mse.pls <- mean((pls.pred-y[test])^2)
+# Returns PLS MSE = 80.35265
+```
+
