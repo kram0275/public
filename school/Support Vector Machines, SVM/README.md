@@ -1,2 +1,8 @@
-# public
-Public Portfolio.  As of June 2019, this contains purely scripts written in R, reports written in RMarkdown, and Shiny apps. Files written for professional, academic, and leisure purposes are included.
+# public/school/Support Vector Machines, SVM
+
+Report: https://kram0275.github.io/public/markdown12.html
+
+RMarkdown code found in .Rmd file.
+RDa file contains a large matrix.
+
+Data analysis report completed as an assignment for STAT 508: Applied Data Mining and Statistical Learning, taken at Penn State University.
