@@ -1,5 +1,5 @@
 # public/school
-Data analysis report written as an assignment for STAT 508 Applied Data Mining and Statistical Learning taken at Penn State University. Report chosen as weekly example report for student peers.
+Data analysis report written as an assignment for STAT 508 Applied Data Mining and Statistical Learning taken at Penn State University. 
 
 RMarkdown code found within .Rmd file, viewable via text editor.
 
