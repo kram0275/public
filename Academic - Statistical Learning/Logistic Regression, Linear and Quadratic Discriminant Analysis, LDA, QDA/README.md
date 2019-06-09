@@ -1,6 +1,6 @@
-# public/Statistical Learning/Principal Components Analysis, PCA
+# public/Academic - Statistical Learning/Logistic Regression, Linear and Quadratic Discriminant Analysis, LDA, QDA
 
-Report: https://kram0275.github.io/public/markdown7.html
+Report: https://kram0275.github.io/public/markdown9.html
 
 RMarkdown code found in .Rmd file.
 

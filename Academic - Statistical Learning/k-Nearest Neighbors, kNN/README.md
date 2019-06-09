@@ -1,6 +1,6 @@
-# public/Statistical Learning/Best Subsets, Ridge and Lasso, PCR, PLS
+# public/Academic - Statistical Learning/k-Nearest Neighbors, kNN
 
-Report: https://kram0275.github.io/public/markdown6.html
+Report: https://kram0275.github.io/public/markdown10.html
 
 RMarkdown code found in .Rmd file.
 

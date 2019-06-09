@@ -1,6 +1,6 @@
-# public/Statistical Learning/Dimension Reduction - Principal Components Regression and Partial Least Squares, PCR, PLS
+# public/Academic - Statistical Learning/Principal Components Analysis, PCA
 
-Report: https://kram0275.github.io/public/markdown5.html
+Report: https://kram0275.github.io/public/markdown7.html
 
 RMarkdown code found in .Rmd file.
 
