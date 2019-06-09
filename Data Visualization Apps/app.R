@@ -1,6 +1,6 @@
 ### See https://deanattali.com/blog/building-shiny-apps-tutorial/
 
-# App Originally conceptualized in July 2018
+# App originally conceptualized in July 2018
 
 load(file = "war_shiny.Rda")
 load(file ="yearPlot.Rda")
