@@ -2,7 +2,7 @@ Test Method,Name of Test.msm,,
 Sample I. D.,Material Name and Date.mss,,
 Specimen Number,3,,
 ,,,
-Time (min),Stress (psi),% Compression (%),Crosshead (mil)
+Time (min),Load (N),% Compression (%),Crosshead (mil)
 ,,,
 0.001,-0.166,0.098,19.9803
 0.002,0.476,0.433,19.9134
