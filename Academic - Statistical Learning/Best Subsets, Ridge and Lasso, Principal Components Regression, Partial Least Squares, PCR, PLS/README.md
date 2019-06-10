@@ -1,6 +1,6 @@
-# public/Statistical Learning/Exploratory Data Analysis, EDA
+# public/Academic - Statistical Learning/Best Subsets, Ridge and Lasso, PCR, PLS
 
-Report: https://kram0275.github.io/public/markdown1.html
+Report: https://kram0275.github.io/public/markdown6.html
 
 RMarkdown code found in .Rmd file.
 

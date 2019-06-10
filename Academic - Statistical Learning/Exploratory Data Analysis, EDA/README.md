@@ -1,6 +1,6 @@
-# public/Statistical Learning/Logistic Regression, Linear and Quadratic Discriminant Analysis, LDA, QDA
+# public/Academic - Statistical Learning/Exploratory Data Analysis, EDA
 
-Report: https://kram0275.github.io/public/markdown9.html
+Report: https://kram0275.github.io/public/markdown1.html
 
 RMarkdown code found in .Rmd file.
 
