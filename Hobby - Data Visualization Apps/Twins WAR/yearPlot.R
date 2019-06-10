@@ -19,4 +19,4 @@ yearPlot <- function(df, calYear) {
 
 yearPlot(full_data, 1991)
 
-save(yearPlot, file = "yearPlot.Rdata")
+save(yearPlot, file = "yearPlot.Rda")

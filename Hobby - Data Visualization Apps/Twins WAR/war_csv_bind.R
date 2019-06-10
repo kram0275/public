@@ -31,6 +31,6 @@ colnames(full_data) <- headers
 colnames(full_data)
 
 # Save df, list, raw data filename vector
-save(full_data, war_list, csvnamesTotal, file = "war_shiny.rda")
+save(full_data, war_list, csvnamesTotal, file = "war_shiny.Rda")
 # Clean up
 rm(i, csvnames, csvnames2, csvnames3, headers)
