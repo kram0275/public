@@ -1,2 +1,5 @@
-# public/Academic - Numerical Methods
-As of June 2019, this contains scientific programming reports and revelant MATLAB code using various numerical methods. Reports completed as assignments for CE 3101 Computer Applications in Civil Engineering at University of Minnesota - Twin Cities, taken during the spring semester of 2014.  The class represented my first and only formal education on programming and related concepts.
+# public/Academic - Numerical Methods/Regression, Interpolation
+
+Report found in PDF file.
+
+R script files contain functions for various techniques of linear fitting a set of data using either a defined regression equation or matrix methods, as well as fitting a curve using either a polynomial fit or interpolation.
