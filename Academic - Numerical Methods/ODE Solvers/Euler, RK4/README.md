@@ -1,2 +1,5 @@
-# public/Academic - Numerical Methods
-As of June 2019, this contains scientific programming reports and revelant MATLAB code using various numerical methods. Reports completed as assignments for CE 3101 Computer Applications in Civil Engineering at University of Minnesota - Twin Cities, taken during the spring semester of 2014.  The class represented my first and only formal education on programming and related concepts.
+# public/Academic - Numerical Methods/ODE Solvers/Euler, RK4
+
+Report found in PDF file.
+
+MATLAB script files contain functions for solving and plotting the solutions of an ODE using 3 different techniques: forward Euler, modified Euler, and Runge-Kutta 4.

@@ -2,6 +2,6 @@
 
 Report found in PDF file.
 
-R script files contain functions for various techniques of numerical integration.
+MATLAB script files contain functions for various techniques of numerical integration.
 
 The primary motivation behind the report was to estimate the area of the state of Texas using either Monte Carlo methods or numerical integration on a user-defined polygon approximation of its form.
