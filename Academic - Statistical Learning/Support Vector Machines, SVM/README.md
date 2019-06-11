@@ -1,4 +1,4 @@
-# public/SAcademic - Statistical Learning/Support Vector Machines, SVM
+# public/Academic - Statistical Learning/Support Vector Machines, SVM
 
 Report: https://kram0275.github.io/public/markdown12.html
 
