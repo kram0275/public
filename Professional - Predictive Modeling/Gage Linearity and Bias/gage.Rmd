@@ -1,7 +1,6 @@
 ---
-title: "Gage Linearity and Bias to Improve Linear Fit"
+title: "Using Gage Linearity and Bias to Improve a Linear Fit"
 author: "Will Kramlinger"
-date: "May 14, 2019"
 output: 
   html_document:
     code_folding: hide
@@ -45,7 +44,7 @@ df %>%
   kable(align = "l") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = TRUE, font_size = 12, position = "center") %>% 
-  scroll_box(width = "100%", height = "350px")
+  scroll_box(width = "100%", height = "330px")
 ```
 *Table 1: Original data set comprising 10 observations (samples), each measured across 3 machines (predictors).*  
   
@@ -59,7 +58,7 @@ df %>%
   kable(align = "l") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = TRUE, font_size = 12, position = "center") %>% 
-  scroll_box(width = "100%", height = "350px")
+  scroll_box(width = "100%", height = "330px")
 ```
 *Table 2: Data set used for analysis, which includes the omission of 3 ref values.*  
 
@@ -98,6 +97,8 @@ Of note are the $R^2$ values for each model: $R^{2}_{m_{1}, ref} = 0.8534$, $R^{
     
 #### Gage Linearity and Bias  
   
+At the suggestion of another co-worker, a gage linearity and bias analysis was conducted on the two portable machines. Such an analysis is easily accomplished in point-and-click software (i.e., Minitab), but is repeated here in R.
+
 Calculated the bias for each machine via...
 
 <center>
@@ -121,7 +122,12 @@ Ran the bias1...
 attach(df)
 
 b1.model <- lm(bias1 ~ ref)
-summary(b1.model)
+b1.model.table <- tabler.lm.slr(b1.model)
+b1.model.table %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "100%", height = "160px")
 ```
 
 <center>
@@ -134,7 +140,12 @@ Ran the bias2...
 
 ```{r Table 7: Bias 2, message = FALSE}
 b2.model <- lm(bias2 ~ ref)
-summary(b2.model)
+b2.model.table <- tabler.lm.slr(b2.model)
+b2.model.table %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "100%", height = "160px")
 ```
 
 <center>
@@ -146,5 +157,3 @@ knitr::include_graphics("Bias2.png")
 
 
 ## Conclusions
-
-## Appendix I: R Code
