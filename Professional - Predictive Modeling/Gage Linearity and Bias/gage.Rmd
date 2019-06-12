@@ -1,7 +1,7 @@
 ---
-title: "Gage Linearity and Bias"
+title: "Gage Linearity and Bias to Improve Linear Fit"
 author: "Will Kramlinger"
-date: "June 11, 2019"
+date: "May 14, 2019"
 output: 
   html_document:
     code_folding: hide
@@ -15,16 +15,20 @@ output:
 body {
 text-align: justify}
 </style>
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Introduction
+## Problem
+A co-worker had developed **two portable test machines** (*m1, m2*) meant to measure the same property as an in-house system, the **Reference** (*ref*) system. The absolute values of the measurements between machines were quickly found to differ significantly when testing with the same sample.
+
+Two regression models, one for each machine, were desired to predict *ref* measurements based on the readings of each of *m1* and *m2*.  Desired accuracy for each model was within 10% of the *ref* value. 
 
 ## Data
 
-The original data set looked like...
-```{r Table 1: Summary, message = FALSE}
+Towards this end, an experiment was designed that consisted of testing 10 different samples using each of the three machines.  The samples themselves consisted of two subsets: 5 containing a prototype material and expected to give lower values (samples A and B), and 5 without the prototype material and expected to give higher values (samples C and D). The original data set is shown in Table 1 below.
+
+```{r Table 1: Summary, message = FALSE, warning = FALSE}
 rm(list = ls())
 
 library(knitr)
@@ -33,8 +37,6 @@ library(kableExtra)
 df <- read.csv(file = "dummydata.csv")
 df <- df[ , -c(5:7)]
 colnames(df)[1:4] <- c("sample", "ref", "m1", "m2")
-df$bias1 <- df$m1 - df$ref
-df$bias2 <- df$m2 - df$ref
 
 rownames(df) <- df$sample
 df <- df[ , -1]
@@ -45,63 +47,103 @@ df %>%
                 full_width = TRUE, font_size = 12, position = "center") %>% 
   scroll_box(width = "100%", height = "350px")
 ```
-
-Cleaned the data and then...
+*Table 1: Original data set comprising 10 observations (samples), each measured across 3 machines (predictors).*  
+  
+Upon exploratory data analysis (EDA), a problem with the data was observed. Namely, the *ref* measurements for samples D1 - D3 did not produce the higher values which were fully expected based on a significant amount of previous experiments. Via physical intuition and past experience, these outlier values were attributed to faulty connections in the *ref* measurement system. **Thus, the decision was made to remove the ref values for samples D1 - D3 from the data set.**  
+  
+The resulting data set, used for all subsequent analysis, is found as Table 2.
 
 ```{r  Table 2: Clean Summary, message = FALSE}
-df[5:7, c(1, 4, 5)] <- NA
+df[8:10, 1] <- NA
 df %>%
   kable(align = "l") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = TRUE, font_size = 12, position = "center") %>% 
   scroll_box(width = "100%", height = "350px")
 ```
+*Table 2: Data set used for analysis, which includes the omission of 3 ref values.*  
 
-Ran the m1 vs. ref...
-```{r Table 3: Machine 1, message = FALSE}
+## Results and Discussion
+  
+#### OLS Regression  
+  
+Two ordinary least squares (OLS) regression models were generated: one for the relationship between *ref* and *m1*, and one for *ref* and *m2*. The regression output of both models can be found in Table 3.  
+
+```{r Table 3a: Machine 1, message = FALSE, warning = FALSE}
 attach(df)
 
+load(file = "tabler_lm_slr.Rda")
+
 m1.model <- lm(m1 ~ ref)
-summary(m1.model)
+m1.model.table <- tabler.lm.slr(m1.model)
+m1.model.table %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "100%", height = "160px")
 ```
-
-Ran the m2 vs. ref...
-
-```{r Table 4: Machine 2, message = FALSE}
+```{r Table 3b: Machine 2, message = FALSE, warning = FALSE}
 m2.model <- lm(m2 ~ ref)
-summary(m2.model)
+m2.model.table <- tabler.lm.slr(m2.model)
+m2.model.table %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "100%", height = "160px")
 ```
+*Table 3: Regression output from OLS models for m1 vs. ref (top), and m2 vs. ref (bottom).*  
+  
+Of note are the $R^2$ values for each model: $R^{2}_{m_{1}, ref} = 0.8534$, $R^{2}_{m_{2}, ref} = 0.8248$. These values suggest a strong linear correlation between each portable machine's reading and the reference reading.  
+    
+    
+#### Gage Linearity and Bias  
+  
+Calculated the bias for each machine via...
 
+<center>
+$bias_1 = m_1 - ref$  
+$bias_2 = m_2 - ref$  
+</center>
+
+```{r Table 4: Bias Data, message = FALSE}
+df$bias1 <- df$m1 - df$ref
+df$bias2 <- df$m2 - df$ref
+df %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "100%", height = "160px")
+```
 
 Ran the bias1...
 
-```{r Table 5: Bias 1, message = FALSE}
+```{r Table 6: Bias 1, message = FALSE}
+attach(df)
+
 b1.model <- lm(bias1 ~ ref)
 summary(b1.model)
 ```
 
 <center>
-```{r Fig 1. Bias 1, echo = FALSE, fig.cap = "Bias and Linearity for Machine 1", out.width = '89%'}
+```{r Fig 1. Bias 1, echo = FALSE, fig.cap = "Bias and Linearity for Machine 1", out.width = '60%'}
 knitr::include_graphics("Bias1.png")
 ```
 </center>
 
 Ran the bias2...
 
-```{r Table 6: Bias 2, message = FALSE}
+```{r Table 7: Bias 2, message = FALSE}
 b2.model <- lm(bias2 ~ ref)
 summary(b2.model)
 ```
 
 <center>
-```{r Fig 2. Bias 2, echo = FALSE, fig.cap = "Bias and Linearity for Machine 2", out.width = '80%'}
+```{r Fig 2. Bias 2, echo = FALSE, fig.cap = "Bias and Linearity for Machine 2", out.width = '60%'}
 knitr::include_graphics("Bias2.png")
 ```
 </center>
 
-## Results and Discussion
 
-#### Other Predictor Combinations, Transformations
 
 ## Conclusions
 
