@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Problem
 A co-worker had developed **two portable test machines** (*m1, m2*) meant to measure the same property as an in-house system, the **Reference** (*ref*) system. The absolute values of the measurements between machines were quickly found to differ significantly when testing with the same sample.
 
-Two regression models, one for each machine, were desired to predict *ref* measurements based on the readings of each of *m1* and *m2*.  Desired accuracy for each model was within 10% of the *ref* value. 
+Two models, one for each machine, were desired to predict *ref* measurements based on the readings of each of *m1* and *m2*.  Desired accuracy for each model was within 10% of the *ref* value. 
 
 ## Data
 
@@ -90,7 +90,7 @@ m2.model.table %>%
                 full_width = TRUE, font_size = 12, position = "center") %>% 
   scroll_box(width = "100%", height = "160px")
 ```
-*Table 3: Regression output from OLS models for m1 vs. ref (top), and m2 vs. ref (bottom).*  
+*Table 3: Regression output from OLS models for m1 vs. ref (top) and m2 vs. ref (bottom).*  
   
 Of note are the $R^2$ values for each model: $R^{2}_{m_{1}, ref} = 0.8534$, $R^{2}_{m_{2}, ref} = 0.8248$. These values suggest a strong linear correlation between each portable machine's reading and the reference reading, which is corroborated by the low p-values observed for including *ref* as a linear predictor.  
     
@@ -102,8 +102,8 @@ At the suggestion of another co-worker, a gage linearity and bias analysis was c
 The **bias**, as used in the domain of quality engineering, of a test apparatus is defined as the difference between its measured value and some reference value. Thus, in this situation, the biases of *m1* and *m2* may be calculated as
 
 <center>
-$bias_1 = m_1 - ref$  
-$bias_2 = m_2 - ref$.  
+$bias_{i,1} = m_{i,1} - ref_{i}$  [Eq. 1]  
+$bias_{i,2} = m_{i,2} - ref_{i}$.  [Eq. 2]  
 
 </center>  
   
@@ -120,9 +120,9 @@ df %>%
 ```
 *Table 4: Data set with the bias of each machine included.*   
   
-In basic terms, a Gage Linearity and Bias study is a linear regression of a machine's bias regressed onto the reference values. 
+In basic terms, a Gage Linearity and Bias study is a linear regression of a machine's biases regressed onto the reference values. OLS regression models for *bias1* and *bias2* vs. *ref* were generated, the output from which are shown below as Table 5. Plots of each machine's biases vs. reference values are shown as Figs. 1 and 2.
 
-```{r Table 6: Bias 1, message = FALSE}
+```{r Table 5: Bias 1 and 2 Tables, message = FALSE}
 attach(df)
 
 b1.model <- lm(bias1 ~ ref)
@@ -132,17 +132,7 @@ b1.model.table %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = TRUE, font_size = 12, position = "center") %>% 
   scroll_box(width = "100%", height = "160px")
-```
-  
-<center>
-```{r Fig 1. Bias 1, echo = FALSE, fig.cap = "Bias and Linearity for Machine 1", out.width = '60%'}
-knitr::include_graphics("Bias1.png")
-```
-</center>
-  
-Ran the bias2...
-  
-```{r Table 7: Bias 2, message = FALSE}
+
 b2.model <- lm(bias2 ~ ref)
 b2.model.table <- tabler.lm.slr(b2.model)
 b2.model.table %>%
@@ -151,13 +141,43 @@ b2.model.table %>%
                 full_width = TRUE, font_size = 12, position = "center") %>% 
   scroll_box(width = "100%", height = "160px")
 ```
+*Table 5: Regression output from gage linearity and bias for bias1 vs. ref (top) and bias2 vs. ref (bottom).*    
+
+
+<center>
+```{r Fig 1. Bias 1, echo = FALSE, fig.cap = "Fig. 1: Gage linearity and bias for m1 with regression line.", out.width = '60%'}
+knitr::include_graphics("Bias1.png")
+```
+</center>
   
 <center>
-```{r Fig 2. Bias 2, echo = FALSE, fig.cap = "Bias and Linearity for Machine 2", out.width = '60%'}
+```{r Fig 2. Bias 2, echo = FALSE, fig.cap = "Fig. 2: Gage linearity and bias for m2 with regression line.", out.width = '60%'}
 knitr::include_graphics("Bias2.png")
 ```
 </center>  
+  
+In an ideal situation, Figs. 1 and 2 display the bias data and regression line as horizontal, which would indicate a constant machine bias across all *ref* values; the overall bias of the machine then can be reasonably estimated as the average of all of the bias values. These graphs, as well as the output in Table 5, indicate that the biases for both machines are decidedly not horizontal and non-constant. However, the situation observed represents the next best case: the biases vary in a systematic manner, such that they may be reasonably estimated by linear equations. From the regression output of Table 5:
 
+<center>
+$bias_1 = 1.1885 - 0.4258(ref)$  [Eq. 3]    
+$bias_2 = 1.0542 + 0.46118(ref)$. [Eq. 4]    
 
+</center> 
+
+By rearrangement of the aforementioned definitions of bias, Eqs. 1 and 2:
+
+<center>
+$m_1 = ref + bias_1$  [Eq. 5]  
+$m_2 = ref + bias_2$.  [Eq. 6]
+
+</center> 
+
+By substituting Eqs. 3 and 4 into Eqs. 5 and 6, respectively:
+
+<center>
+$m_1 = ref + bias_1 = ref + (1.1885 - 0.4258(ref)) = 1.1885 + 0.5742(ref)$   [Eq. 7]
+$m_2 = ref + bias_2 = ref + (1.0542 - 0.53882(ref)) = 1.0542 + 0.46118(ref)$.  [Eq. 8]
+
+</center> 
 
 ## Conclusions
