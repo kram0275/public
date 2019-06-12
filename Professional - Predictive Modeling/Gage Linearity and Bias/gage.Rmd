@@ -92,20 +92,23 @@ m2.model.table %>%
 ```
 *Table 3: Regression output from OLS models for m1 vs. ref (top), and m2 vs. ref (bottom).*  
   
-Of note are the $R^2$ values for each model: $R^{2}_{m_{1}, ref} = 0.8534$, $R^{2}_{m_{2}, ref} = 0.8248$. These values suggest a strong linear correlation between each portable machine's reading and the reference reading.  
+Of note are the $R^2$ values for each model: $R^{2}_{m_{1}, ref} = 0.8534$, $R^{2}_{m_{2}, ref} = 0.8248$. These values suggest a strong linear correlation between each portable machine's reading and the reference reading, which is corroborated by the low p-values observed for including *ref* as a linear predictor.  
     
     
 #### Gage Linearity and Bias  
   
 At the suggestion of another co-worker, a gage linearity and bias analysis was conducted on the two portable machines. Such an analysis is easily accomplished in point-and-click software (i.e., Minitab), but is repeated here in R.
 
-Calculated the bias for each machine via...
+The **bias**, as used in the domain of quality engineering, of a test apparatus is defined as the difference between its measured value and some reference value. Thus, in this situation, the biases of *m1* and *m2* may be calculated as
 
 <center>
 $bias_1 = m_1 - ref$  
-$bias_2 = m_2 - ref$  
-</center>
+$bias_2 = m_2 - ref$.  
 
+</center>  
+  
+These biases were calculated and added to the data set, as shown in Table 4.  
+  
 ```{r Table 4: Bias Data, message = FALSE}
 df$bias1 <- df$m1 - df$ref
 df$bias2 <- df$m2 - df$ref
@@ -115,8 +118,9 @@ df %>%
                 full_width = TRUE, font_size = 12, position = "center") %>% 
   scroll_box(width = "100%", height = "160px")
 ```
-
-Ran the bias1...
+*Table 4: Data set with the bias of each machine included.*   
+  
+In basic terms, a Gage Linearity and Bias study is a linear regression of a machine's bias regressed onto the reference values. 
 
 ```{r Table 6: Bias 1, message = FALSE}
 attach(df)
@@ -129,15 +133,15 @@ b1.model.table %>%
                 full_width = TRUE, font_size = 12, position = "center") %>% 
   scroll_box(width = "100%", height = "160px")
 ```
-
+  
 <center>
 ```{r Fig 1. Bias 1, echo = FALSE, fig.cap = "Bias and Linearity for Machine 1", out.width = '60%'}
 knitr::include_graphics("Bias1.png")
 ```
 </center>
-
+  
 Ran the bias2...
-
+  
 ```{r Table 7: Bias 2, message = FALSE}
 b2.model <- lm(bias2 ~ ref)
 b2.model.table <- tabler.lm.slr(b2.model)
@@ -147,12 +151,12 @@ b2.model.table %>%
                 full_width = TRUE, font_size = 12, position = "center") %>% 
   scroll_box(width = "100%", height = "160px")
 ```
-
+  
 <center>
 ```{r Fig 2. Bias 2, echo = FALSE, fig.cap = "Bias and Linearity for Machine 2", out.width = '60%'}
 knitr::include_graphics("Bias2.png")
 ```
-</center>
+</center>  
 
 
 

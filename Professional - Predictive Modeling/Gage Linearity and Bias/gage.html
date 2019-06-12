@@ -967,16 +967,17 @@ F, numDF, denomDF
 </table>
 </div>
 <p><em>Table 3: Regression output from OLS models for m1 vs. ref (top), and m2 vs. ref (bottom).</em></p>
-<p>Of note are the <span class="math inline">\(R^2\)</span> values for each model: <span class="math inline">\(R^{2}_{m_{1}, ref} = 0.8534\)</span>, <span class="math inline">\(R^{2}_{m_{2}, ref} = 0.8248\)</span>. These values suggest a strong linear correlation between each portable machine’s reading and the reference reading.</p>
+<p>Of note are the <span class="math inline">\(R^2\)</span> values for each model: <span class="math inline">\(R^{2}_{m_{1}, ref} = 0.8534\)</span>, <span class="math inline">\(R^{2}_{m_{2}, ref} = 0.8248\)</span>. These values suggest a strong linear correlation between each portable machine’s reading and the reference reading, which is corroborated by the low p-values observed for including <em>ref</em> as a linear predictor.</p>
 </div>
 <div id="gage-linearity-and-bias" class="section level4">
 <h4>Gage Linearity and Bias</h4>
 <p>At the suggestion of another co-worker, a gage linearity and bias analysis was conducted on the two portable machines. Such an analysis is easily accomplished in point-and-click software (i.e., Minitab), but is repeated here in R.</p>
-<p>Calculated the bias for each machine via…</p>
+<p>The <strong>bias</strong>, as used in the domain of quality engineering, of a test apparatus is defined as the difference between its measured value and some reference value. Thus, in this situation, the biases of <em>m1</em> and <em>m2</em> may be calculated as</p>
 <center>
-<span class="math inline">\(bias_1 = m_1 - ref\)</span><br />
-<span class="math inline">\(bias_2 = m_2 - ref\)</span>
+<p><span class="math inline">\(bias_1 = m_1 - ref\)</span><br />
+<span class="math inline">\(bias_2 = m_2 - ref\)</span>.</p>
 </center>
+<p>These biases were calculated and added to the data set, as shown in Table 4.</p>
 <pre class="r"><code>df$bias1 &lt;- df$m1 - df$ref
 df$bias2 &lt;- df$m2 - df$ref
 df %&gt;%
@@ -1211,7 +1212,8 @@ NA
 </tbody>
 </table>
 </div>
-<p>Ran the bias1…</p>
+<p><em>Table 4: Data set with the bias of each machine included.</em></p>
+<p>In basic terms, a Gage Linearity and Bias study is a linear regression of a machine’s bias regressed onto the reference values.</p>
 <pre class="r"><code>attach(df)
 
 b1.model &lt;- lm(bias1 ~ ref)
