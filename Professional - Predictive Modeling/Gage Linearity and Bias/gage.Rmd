@@ -62,9 +62,7 @@ df %>%
 ```
 *Table 2: Data set used for analysis, which includes the omission of 3 ref values.*  
 
-## Results and Discussion
-  
-#### OLS Regression  
+## OLS Regression  
   
 Two ordinary least squares (OLS) regression models were generated: one for the relationship between *ref* and *m1*, and one for *ref* and *m2*. The regression output of both models can be found in Table 3.  
 
@@ -73,7 +71,7 @@ attach(df)
 
 load(file = "tabler_lm_slr.Rda")
 
-m1.model <- lm(m1 ~ ref)
+m1.model <- lm(ref ~ m1)
 m1.model.table <- tabler.lm.slr(m1.model)
 m1.model.table %>%
   kable(align = "l") %>%
@@ -82,7 +80,7 @@ m1.model.table %>%
   scroll_box(width = "100%", height = "160px")
 ```
 ```{r Table 3b: Machine 2, message = FALSE, warning = FALSE}
-m2.model <- lm(m2 ~ ref)
+m2.model <- lm(ref ~ m2)
 m2.model.table <- tabler.lm.slr(m2.model)
 m2.model.table %>%
   kable(align = "l") %>%
@@ -90,12 +88,12 @@ m2.model.table %>%
                 full_width = TRUE, font_size = 12, position = "center") %>% 
   scroll_box(width = "100%", height = "160px")
 ```
-*Table 3: Regression output from OLS models for m1 vs. ref (top) and m2 vs. ref (bottom).*  
+*Table 3: Regression output from OLS models for ref vs. m1 (top) and ref vs. m2 (bottom).*  
   
-Of note are the $R^2$ values for each model: $R^{2}_{m_{1}, ref} = 0.8534$, $R^{2}_{m_{2}, ref} = 0.8248$. These values suggest a strong linear correlation between each portable machine's reading and the reference reading, which is corroborated by the low p-values observed for including *ref* as a linear predictor.  
+Of note are the $R^2$ values for each model: $R^{2}_{ref, m_{1}} = 0.8534$, $R^{2}_{ref, m_{2}} = 0.8248$. These values suggest a strong linear correlation between each portable machine's reading and the reference reading, which is corroborated by the low p-values observed for each of *m1* and *m2* as linear predictors.  
     
     
-#### Gage Linearity and Bias  
+## Gage Linearity and Bias  
   
 At the suggestion of another co-worker, a gage linearity and bias analysis was conducted on the two portable machines. Such an analysis is easily accomplished in point-and-click software (i.e., Minitab), but is repeated here in R.
 
@@ -160,7 +158,7 @@ In an ideal situation, Figs. 1 and 2 display the bias data and regression line a
 
 <center>
 $bias_1 = 1.1885 - 0.4258(ref)$  [Eq. 3]    
-$bias_2 = 1.0542 + 0.46118(ref)$. [Eq. 4]    
+$bias_2 = 1.0542 + 0.4612(ref)$. [Eq. 4]    
 
 </center> 
 
@@ -172,12 +170,30 @@ $m_2 = ref + bias_2$.  [Eq. 6]
 
 </center> 
 
-By substituting Eqs. 3 and 4 into Eqs. 5 and 6, respectively:
+By substituting Eqs. 3 and 4 into Eqs. 5 and 6, respectively, we arrive at two equations which can be used to predict the reading of either portable machine based on a reference value:
 
 <center>
 $m_1 = ref + bias_1 = ref + (1.1885 - 0.4258(ref)) = 1.1885 + 0.5742(ref)$   [Eq. 7]
 $m_2 = ref + bias_2 = ref + (1.0542 - 0.53882(ref)) = 1.0542 + 0.46118(ref)$.  [Eq. 8]
 
 </center> 
+  
+Recall that the purpose of the model was to be able to predict the *ref* value based on the readings of *m1* and *m2*. All that is needed is to rearrange equations 7 and 8 to
 
-## Conclusions
+<center>
+$ref = \frac{m_{1} - 1.1885}{0.5742} = -2.0698 + 1.7412(m_1)$  [Eq. 9]  
+$ref = \frac{m_{2} - 1.0542}{0.4612} = -2.1682 + 2.2858(m_2)$.  [Eq. 10]
+
+</center>  
+
+Note that the linear coefficients from the Gage analysis differ greatly from those from the OLS regression from Table 3:
+
+<center>
+$ref = -1.5106 + 1.4862(m_1)$  [Eq. 11]  
+$ref = -1.5799 + 1.7885(m_2)$.  [Eq. 12]
+
+</center> 
+
+
+## Comparison of Models
+With equations generated via both the OLS regression models from Table 3

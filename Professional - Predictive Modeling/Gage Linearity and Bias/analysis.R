@@ -14,10 +14,10 @@ df$bias2 <- df$m2 - df$ref
 
 attach(df)
 
-m1.model <- lm(m1 ~ ref)
+m1.model <- lm(ref ~ m1)
 summary(m1.model)
 
-m2.model <- lm(m2 ~ ref)
+m2.model <- lm(ref ~ m2)
 summary(m2.model)
 
 b1.model <- lm(bias1 ~ ref)
