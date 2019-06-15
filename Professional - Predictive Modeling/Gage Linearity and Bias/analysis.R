@@ -1,4 +1,5 @@
 rm(list = ls())
+library(ggplot2)
 df <- read.csv(file = "dummydata.csv")
 df <- df[ , -c(5:7)]
 colnames(df)[1:4] <- c("sample", "ref", "m1", "m2")
@@ -35,3 +36,12 @@ ref.predict1 <- (p1.val - b1.model$coefficients[1]) /
 ref.predict2 <- (p2.val - b2.model$coefficients[1]) / 
   (b2.model$coefficients[2] + 1) 
 
+plot(ref ~ m1, xlab = "Machine 1", ylab = "Reference")
+abline(a = -2.0698, b = 1.7412, col = "blue") # Gage
+abline(a = -1.5106, b = 1.4862, col = "red") # OLS
+?abline
+
+plot(ref ~ m2, xlab = "Machine 2", ylab = "Reference")
+abline(a = -2.2858, b = 2.1683, col = "blue") # Gage
+abline(a = -1.5799, b = 1.7885, col = "red") # OLS
+?abline

@@ -1,5 +1,5 @@
 ---
-title: "Using Gage Linearity and Bias to Improve a Linear Fit"
+title: "Gage Linearity and Bias Study"
 author: "Will Kramlinger"
 output: 
   html_document:
@@ -32,6 +32,7 @@ rm(list = ls())
 
 library(knitr)
 library(kableExtra)
+library(ggplot2)
 
 df <- read.csv(file = "dummydata.csv")
 df <- df[ , -c(5:7)]
@@ -174,7 +175,7 @@ By substituting Eqs. 3 and 4 into Eqs. 5 and 6, respectively, we arrive at two e
 
 <center>
 $m_1 = ref + bias_1 = ref + (1.1885 - 0.4258(ref)) = 1.1885 + 0.5742(ref)$   [Eq. 7]
-$m_2 = ref + bias_2 = ref + (1.0542 - 0.53882(ref)) = 1.0542 + 0.46118(ref)$.  [Eq. 8]
+$m_2 = ref + bias_2 = ref + (1.0542 - 0.5388(ref)) = 1.0542 + 0.4612(ref)$.  [Eq. 8]
 
 </center> 
   
@@ -182,7 +183,7 @@ Recall that the purpose of the model was to be able to predict the *ref* value b
 
 <center>
 $ref = \frac{m_{1} - 1.1885}{0.5742} = -2.0698 + 1.7412(m_1)$  [Eq. 9]  
-$ref = \frac{m_{2} - 1.0542}{0.4612} = -2.1682 + 2.2858(m_2)$.  [Eq. 10]
+$ref = \frac{m_{2} - 1.0542}{0.4612} = -2.2858 + 2.1683(m_2)$.  [Eq. 10]
 
 </center>  
 
@@ -196,5 +197,6 @@ $ref = -1.5799 + 1.7885(m_2)$.  [Eq. 12]
 
 
 ## Comparison of Models
-A plot of 
+
+Manual calculation of the $R^2$ values for the Gage models reveals slight improvements in fit. Gage model 1 gives $R^2 = 0.8722$ (vs. 0.8534 for OLS).  Gage model 2 gvies $R^2 = 0.8593$ (vs. 0.8248 for OLS). Plots of *ref* vs. *m1* and *m2*, along with their respective OLS and gage trendlines, are shown in Fig. 3 below.  
 
