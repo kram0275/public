@@ -25,7 +25,7 @@ Two models, one for each machine, were desired to predict *ref* measurements bas
 
 ## Data
 
-Towards this end, an experiment was designed that consisted of testing 10 different samples using each of the three machines.  The samples themselves consisted of two subsets: 5 containing a prototype material and expected to give lower values (samples A and B), and 5 without the prototype material and expected to give higher values (samples C and D). The original data set is shown in Table 1 below.
+Towards this end, an experiment was designed that consisted of testing 10 different samples using each of the three machines.  The samples themselves consisted of two subsets: 5 containing a prototype material and expected to give lower values (samples A and B), and 5 without the prototype material and expected to give higher values (samples C and D). Due to time constraints, only 1 replicate per sample was performed. The original data set is shown in Table 1 below.
 
 ```{r Table 1: Summary, message = FALSE, warning = FALSE}
 rm(list = ls())
@@ -198,5 +198,60 @@ $ref = -1.5799 + 1.7885(m_2)$.  [Eq. 12]
 
 ## Comparison of Models
 
-Manual calculation of the $R^2$ values for the Gage models reveals slight improvements in fit. Gage model 1 gives $R^2 = 0.8722$ (vs. 0.8534 for OLS).  Gage model 2 gvies $R^2 = 0.8593$ (vs. 0.8248 for OLS). Plots of *ref* vs. *m1* and *m2*, along with their respective OLS and gage trendlines, are shown in Fig. 3 below.  
+Plots of *ref* vs. *m1* and *m2*, along with their respective OLS and gage trendlines, are shown in Fig. 3 below. While the improvement of fit from the Gage equations are not immediately obvious, manual calculation of the $R^2$ values for the Gage models reveals slight improvements in fit. Gage model 1 gives $R^2 = 0.8722$ (vs. 0.8534 for OLS).  Gage model 2 gives $R^2 = 0.8593$ (vs. 0.8248 for OLS). 
 
+```{r Fig 3. Comparison, echo = FALSE, fig.cap = "Fig. 3: Reference values vs. machine values for both portable machines with Gage and OLS regression lines.", out.width = '100%'}
+par(mfrow = c(1, 2))
+plot(ref ~ m1, xlab = "Machine 1 Value", ylab = "Reference Value")
+legend("topleft",
+       legend = c("Gage", "OLS"),
+       col = c("blue", "red"),
+       horiz = F,
+       pch = "line")
+abline(a = -2.0698, b = 1.7412, col = "blue") # Gage
+abline(a = -1.5106, b = 1.4862, col = "red") # OLS
+
+
+plot(ref ~ m2, xlab = "Machine 2 Value", ylab = "Reference Value")
+abline(a = -2.2858, b = 2.1683, col = "blue") # Gage
+abline(a = -1.5799, b = 1.7885, col = "red") # OLS
+```
+  
+Based on these results, the gage equations were taken as the predictive models for each machine. **The co-worker who motivated this analysis reported that the model performance satisfied the desired 10% accuracy requirements after subsequent tests were performed.**
+  
+## A Moral Dilemma
+  
+The derived gage equations from both machines were actually equivalent to those derived from performing OLS regressions using *ref* as the predictor and *m1* and *m2* as the responses, and then solving for *ref*; this is in contrast to an OLS regression using *m1* and *m2* as the predictors and *ref* as the predictor, as seen in Table 3.  
+
+Mathematically, the equations  
+
+<center>
+$m_1 = b_0 + b_1(ref)$  [Eq. 13]    
+$m_2 = b_{00} + b_{11}(ref)$  [Eq. 14]  
+
+</center> 
+
+when solved for *ref*, become
+
+<center>
+$ref = \frac{m_{1} - b_{0}}{b_{1}} = -\frac{b_0}{b_1} + \frac{1}{b_1}(m_1)$  [Eq. 15]    
+$ref = \frac{m_{2} - b_{00}}{b_{11}} = -\frac{b_{00}}{b_{11}} + \frac{1}{b_{11}}(m_2)$  [Eq. 16].
+
+</center> 
+
+**In other words, solving for the regression coefficients in Eqs. 13 and 14 via OLS, and then plugging the coefficients into Eqs. 15 and 16, produced equations equivalent to the gage models found in Eqs. 9 and 10.**
+  
+This observation generates 2 questions:  
+  
+1) What was the value of running the gage study?    
+2) Have we performed statistical malpractice by modeling a relationship between a response and predictor and then effectively switching the labels after the model is generated?  
+    
+With regards to the first question, though the gage analysis generated models equivalent to OLS, the discovery that the bias between the reference and portable machines was linear remains valuable. For future testing, the knowledge that we *cannot* "just add $X$" to our measurements prohibits inaccurate assumptions and promotes more refined and accurate predictions.  
+  
+With regards to the second question, this moral dilemma is specific to this particular situation. Specifically, prediction of a reference, or "true", value is generally uncommon in practice. However, because a cause-effect relationship is both highly unlikely (based on intuition) and indeterminable from this data set, an argument can be made that the definitions of predictor and response are completely arbitrary; thus, we should seek out as strong of a fit of the relationship as possible.  
+
+**Of note is that the higher performance of the gage ("rearranged" OLS) equations are not indicative of a universal trend**, for reasons discussed at <https://stats.stackexchange.com/questions/20553/effect-of-switching-response-and-explanatory-variable-in-simple-linear-regressio>. Instead, the differences in model performance should only be attributed to the nature of this particular set of data.  
+  
+## Summary  
+  
+OLS regression and gage linearity and bias analyses were conducted on a set of data comprising 10 test measurements (observations) across 3 different machines, including an in-house reference machine. Predictive models from each analysis were generated with the intention of modeling the reference machine's response. The models based on the gage analysis were found to perform slightly better than the OLS models and were selected to undergo further validation; the desired prediction accuracy of $\pm$10% was achieved and verified through subsequent testing. The bias in measurements between the 3 machines was found to be linear, which will prove valuable for all associated future testing.
