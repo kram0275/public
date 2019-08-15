@@ -1,6 +1,6 @@
 # public/Hobby - Data Visualization Apps/Twins WAR
 
-Data cleaning and visualization project used to educate myself about app development using R Shiny, as well as the ggplot2 data visualization package.
+Data cleaning and visualization project used to educate myself about app development using R Shiny, as well as the ggplot2 data visualization package. In hindsight, the app is essentially a dashboard, created before I knew what people meant by "dashboard."
 
 The app may be accessed at: https://kram0275.shinyapps.io/Twins_WAR_1986_to_2017/
 
