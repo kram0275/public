@@ -1,0 +1,212 @@
+---
+title: "Material Performance Optimization via Multiple Regression"
+author: "Will Kramlinger"
+output: 
+  html_document:
+    code_folding: hide
+    toc: TRUE
+    toc_depth: 2
+    toc_float: TRUE
+    fig_caption: true
+    theme: spacelab
+---
+<style>
+body {
+text-align: justify}
+</style>
+```{r setup, include=FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem
+A formulation was sought which optimized the performance (**perf**) of a prototype material. Via background knowledge of the experimenter and department, the most efficient way of tweaking the performance was adjustment of a ratio (**ratio**) between two raw component materials. Thus, an optimal value of **ratio** was sought which maximized **perf**.
+
+## Data
+
+Towards this end, an experiment was designed that consisted of measuring the response **perf** of 4 different samples with evenly spaced values of **ratio**.   Due to time and material constraints, only 1 replicate per sample was performed. The original data set is shown in Table 1; a plot of **perf** vs. **ratio** is shown as Fig. 1.
+
+```{r Table 1: Summary, message = FALSE, warning = FALSE}
+rm(list = ls())
+
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+
+df <- read.csv(file = "dummy_data.csv")
+colnames(df) <- c("ratio", "perf")
+
+attach(df)
+
+df %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "100%", height = "160px")
+```
+*Table 1: Original data set comprising 4 observations of material performance, each with a different value of ratio (predictor).*  
+
+<center>
+```{r Fig 1. Perf vs Ratio, echo = FALSE, fig.cap = "Fig. 1: Dependence of material performance on raw material ratio. Plot resembles a parabola and strongly suggests usage of polynomial regression to produce a line of best fit.", out.width = '60%'}
+
+ggplot(df, aes(x = ratio, y = perf)) +
+  geom_point(colour = "blue") +
+  theme_bw() +
+  xlab('Raw Material Ratio, "Ratio"') + 
+  ylab('Material Performance, "Perf"')
+
+
+```
+</center>
+  
+Upon visual inspection of Fig. 1, a curvilinear relationship is observed between the two variables; specifically, the data appears parabolic. Based on previous experience, the parabolic nature of the data fully corroborated expectations and the experimenter's intuition that a multiple regression model would need to be implemented.  
+
+
+
+The resulting data set, used for all subsequent analysis, is found as Table 2.
+
+```{r  Table 2: Clean Summary, message = FALSE}
+df$ratio.sq <- ratio^2
+
+df %>%
+  kable(align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12, position = "center") %>% 
+  scroll_box(width = "100%", height = "160px")
+```
+*Table 2: Data set used for analysis, which includes the omission of 3 ref values.*  
+
+## OLS Regression  
+  
+Two ordinary least squares (OLS) regression models were generated: one for the relationship between *ref* and *m1*, and one for *ref* and *m2*. The regression output of both models can be found in Table 3.  
+
+```{r Table 3a: Machine 1, message = FALSE, warning = FALSE}
+
+```
+```{r Table 3b: Machine 2, message = FALSE, warning = FALSE}
+
+```
+*Table 3: Regression output from OLS models for ref vs. m1 (top) and ref vs. m2 (bottom).*  
+  
+Of note are the $R^2$ values for each model: $R^{2}_{ref, m_{1}} = 0.8534$, $R^{2}_{ref, m_{2}} = 0.8248$. These values suggest a strong linear correlation between each portable machine's reading and the reference reading, which is corroborated by the low p-values observed for each of *m1* and *m2* as linear predictors.  
+    
+    
+## Gage Linearity and Bias  
+  
+At the suggestion of another co-worker, a gage linearity and bias analysis was conducted on the two portable machines. Such an analysis is easily accomplished in point-and-click software (i.e., Minitab), but is repeated here in R.
+
+The **bias**, as used in the domain of quality engineering, of a test apparatus is defined as the difference between its measured value and some reference value. Thus, in this situation, the biases of *m1* and *m2* may be calculated as
+
+<center>
+$bias_{i,1} = m_{i,1} - ref_{i}$  [Eq. 1]  
+$bias_{i,2} = m_{i,2} - ref_{i}$.  [Eq. 2]  
+
+</center>  
+  
+These biases were calculated and added to the data set, as shown in Table 4.  
+  
+```{r Table 4: Bias Data, message = FALSE}
+
+```
+*Table 4: Data set with the bias of each machine included.*   
+  
+In basic terms, a Gage Linearity and Bias study is a linear regression of a machine's biases regressed onto the reference values. OLS regression models for *bias1* and *bias2* vs. *ref* were generated, the output from which are shown below as Table 5. Plots of each machine's biases vs. reference values are shown as Figs. 1 and 2.
+
+```{r Table 5: Bias 1 and 2 Tables, message = FALSE}
+
+```
+*Table 5: Regression output from gage linearity and bias for bias1 vs. ref (top) and bias2 vs. ref (bottom).*    
+
+
+<center>
+```{r Fig 2. Bias 2, echo = FALSE, fig.cap = "Fig. 2: Gage linearity and bias for m2 with regression line.", out.width = '60%'}
+
+```
+</center>  
+  
+In an ideal situation, Figs. 1 and 2 display the bias data and regression line as horizontal, which would indicate a constant machine bias across all *ref* values; the overall bias of the machine then can be reasonably estimated as the average of all of the bias values. These graphs, as well as the output in Table 5, indicate that the biases for both machines are decidedly not horizontal and non-constant. However, the situation observed represents the next best case: the biases vary in a systematic manner, such that they may be reasonably estimated by linear equations. From the regression output of Table 5:
+
+<center>
+$bias_1 = 1.1885 - 0.4258(ref)$  [Eq. 3]    
+$bias_2 = 1.0542 + 0.4612(ref)$. [Eq. 4]    
+
+</center> 
+
+By rearrangement of the aforementioned definitions of bias, Eqs. 1 and 2:
+
+<center>
+$m_1 = ref + bias_1$  [Eq. 5]  
+$m_2 = ref + bias_2$.  [Eq. 6]
+
+</center> 
+
+By substituting Eqs. 3 and 4 into Eqs. 5 and 6, respectively, we arrive at two equations which can be used to predict the reading of either portable machine based on a reference value:
+
+<center>
+$m_1 = ref + bias_1 = ref + (1.1885 - 0.4258(ref)) = 1.1885 + 0.5742(ref)$   [Eq. 7]
+$m_2 = ref + bias_2 = ref + (1.0542 - 0.5388(ref)) = 1.0542 + 0.4612(ref)$.  [Eq. 8]
+
+</center> 
+  
+Recall that the purpose of the model was to be able to predict the *ref* value based on the readings of *m1* and *m2*. All that is needed is to rearrange equations 7 and 8 to
+
+<center>
+$ref = \frac{m_{1} - 1.1885}{0.5742} = -2.0698 + 1.7412(m_1)$  [Eq. 9]  
+$ref = \frac{m_{2} - 1.0542}{0.4612} = -2.2858 + 2.1683(m_2)$.  [Eq. 10]
+
+</center>  
+
+Note that the linear coefficients from the Gage analysis differ greatly from those from the OLS regression from Table 3:
+
+<center>
+$ref = -1.5106 + 1.4862(m_1)$  [Eq. 11]  
+$ref = -1.5799 + 1.7885(m_2)$.  [Eq. 12]
+
+</center> 
+
+
+## Comparison of Models
+
+Plots of *ref* vs. *m1* and *m2*, along with their respective OLS and gage trendlines, are shown in Fig. 3 below. While the improvement of fit from the Gage equations are not immediately obvious, manual calculation of the $R^2$ values for the Gage models reveals slight improvements in fit. Gage model 1 gives $R^2 = 0.8722$ (vs. 0.8534 for OLS).  Gage model 2 gives $R^2 = 0.8593$ (vs. 0.8248 for OLS). 
+
+```{r Fig 3. Comparison, echo = FALSE, fig.cap = "Fig. 3: Reference values vs. machine values for both portable machines with Gage and OLS regression lines.", out.width = '100%'}
+
+```
+  
+Based on these results, the gage equations were taken as the predictive models for each machine. **The co-worker who motivated this analysis reported that the model performance satisfied the desired 10% accuracy requirements after subsequent tests were performed.**
+  
+## A Moral Dilemma
+  
+The derived gage equations from both machines were actually equivalent to those derived from performing OLS regressions using *ref* as the predictor and *m1* and *m2* as the responses, and then solving for *ref*; this is in contrast to an OLS regression using *m1* and *m2* as the predictors and *ref* as the predictor, as seen in Table 3.  
+
+Mathematically, the equations  
+
+<center>
+$m_1 = b_0 + b_1(ref)$  [Eq. 13]    
+$m_2 = b_{00} + b_{11}(ref)$  [Eq. 14]  
+
+</center> 
+
+when solved for *ref*, become
+
+<center>
+$ref = \frac{m_{1} - b_{0}}{b_{1}} = -\frac{b_0}{b_1} + \frac{1}{b_1}(m_1)$  [Eq. 15]    
+$ref = \frac{m_{2} - b_{00}}{b_{11}} = -\frac{b_{00}}{b_{11}} + \frac{1}{b_{11}}(m_2)$  [Eq. 16].
+
+</center> 
+
+**In other words, solving for the regression coefficients in Eqs. 13 and 14 via OLS, and then plugging the coefficients into Eqs. 15 and 16, produced equations equivalent to the gage models found in Eqs. 9 and 10.**
+  
+This observation generates 2 questions:  
+  
+1) What was the value of running the gage study?    
+2) Have we performed statistical malpractice by modeling a relationship between a response and predictor and then effectively switching the labels after the model is generated?  
+    
+With regards to the first question, though the gage analysis generated models equivalent to OLS, the discovery that the bias between the reference and portable machines was linear remains valuable. For future testing, the knowledge that we *cannot* "just add $X$" to our measurements prohibits inaccurate assumptions and promotes more refined and accurate predictions.  
+  
+With regards to the second question, this moral dilemma is specific to this particular situation. Specifically, prediction of a reference, or "true", value is generally uncommon in practice. However, because a cause-effect relationship is both highly unlikely (based on intuition) and indeterminable from this data set, an argument can be made that the definitions of predictor and response are completely arbitrary; thus, we should seek out as strong of a fit of the relationship as possible.  
+
+**Of note is that the higher performance of the gage ("rearranged" OLS) equations are not indicative of a universal trend**, for reasons discussed at <https://stats.stackexchange.com/questions/20553/effect-of-switching-response-and-explanatory-variable-in-simple-linear-regressio>. Instead, the differences in model performance should only be attributed to the nature of this particular set of data.  
+  
+## Summary  
+  
+OLS regression and gage linearity and bias analyses were conducted on a set of data comprising 10 test measurements (observations) across 3 different machines, including an in-house reference machine. Predictive models from each analysis were generated with the intention of modeling the reference machine's response. The models based on the gage analysis were found to perform slightly better than the OLS models and were selected to undergo further validation; the desired prediction accuracy of $\pm$10% was achieved and verified through subsequent testing. The bias in measurements between the 3 machines was found to be linear, which will prove valuable for all associated future testing.
