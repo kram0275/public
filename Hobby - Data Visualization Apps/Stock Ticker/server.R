@@ -11,14 +11,13 @@ shinyServer(function(input, output, session) {
   list.of.dfs <<- list() 
   react.val <- reactiveValues()
   
-  observeEvent(
-    input$go,
-    react.val$stocklist <<- c(
-      if(input$stock1 != "") {as.character(input$stock1)} else {NULL},
-      if(input$stock2 != "") {as.character(input$stock2)} else {NULL},
-      if(input$stock3 != "") {as.character(input$stock3)} else {NULL},
-      if(input$stock4 != "") {as.character(input$stock4)} else {NULL},
-      if(input$stock5 != "") {as.character(input$stock5)} else {NULL}))
+  observeEvent(input$go,
+               stocklist <<- c(
+                 if(input$stock1 != "") {as.character(input$stock1)} else {NULL},
+                 if(input$stock2 != "") {as.character(input$stock2)} else {NULL},
+                 if(input$stock3 != "") {as.character(input$stock3)} else {NULL},
+                 if(input$stock4 != "") {as.character(input$stock4)} else {NULL},
+                 if(input$stock5 != "") {as.character(input$stock5)} else {NULL}))
   
   observeEvent(
     input$plotit,
@@ -49,7 +48,7 @@ shinyServer(function(input, output, session) {
         aes(x = Date, y = Close, color = Stock), data = df.sub) +
         geom_line(aes(group = Stock), data = df.sub) +
         labs() +
-        ggtitle("Stock Performance History. Hover over data for details.") +
+        ggtitle("Stock Performance History. Interactive plot (Plotly.com).") +
         scale_x_date(limits <- input$thedates) +
         xlab("Date") +
         ylab("Closing Price [$]") +
@@ -57,9 +56,5 @@ shinyServer(function(input, output, session) {
       ggplotly(the.plot, tooltip = c("y", "x", "group"))
     })
   )
-  
-
   output$danktable <- DT::renderDataTable(react.val$df)
-  
-  
 })
