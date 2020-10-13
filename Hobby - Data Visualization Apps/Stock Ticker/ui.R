@@ -1,33 +1,40 @@
-#
-# This is the user-interface definition of a Shiny web application. You can
-# run the application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-# 
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
+library(DT)
+library(data.table)
+library(quantmod)
+library(ggplot2)
+library(plotly)
 
-# Define UI for application that draws a histogram
+# Grabs data for up to 5 stocks, and plots their closing price histories
 shinyUI(fluidPage(
   
   # Application title
-  titlePanel("Old Faithful Geyser Data"),
+  titlePanel("Stock Ticker"),
   
-  # Sidebar with a slider input for number of bins 
+  # Sidebar 
   sidebarLayout(
     sidebarPanel(
-       sliderInput("bins",
-                   "Number of bins:",
-                   min = 1,
-                   max = 50,
-                   value = 30)
+      h4('Select a date range.'),
+      h4('Enter up to 5 stock symbols in the fields below, 
+        then press "LOCK IN SELECTIONS".'),
+      h4('Press "PLOT IT" to, you know, plot it.'),
+      
+      dateRangeInput("thedates", "Select your date range.", 
+                     start = "2020-01-01"),
+      textInput("stock1", "Enter a stock ticker."),
+      textInput("stock2", "Enter a stock ticker."),
+      textInput("stock3", "Enter a stock ticker."),
+      textInput("stock4", "Enter a stock ticker."),
+      textInput("stock5", "Enter a stock ticker."),
+      actionButton("go", "LOCK IN SELECTIONS."),
+      actionButton("plotit", "PLOT IT."),
+      h3("Will Kramlinger, 10/13/2020")
     ),
     
     # Show a plot of the generated distribution
     mainPanel(
-       plotOutput("distPlot")
+      plotlyOutput("dankplot"),
+      DT::dataTableOutput("danktable")
     )
   )
 ))
