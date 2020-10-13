@@ -21,11 +21,11 @@ shinyUI(fluidPage(
       
       dateRangeInput("thedates", "Select your date range.", 
                      start = "2020-01-01"),
-      textInput("stock1", "Enter a stock ticker."),
-      textInput("stock2", "Enter a stock ticker."),
-      textInput("stock3", "Enter a stock ticker."),
-      textInput("stock4", "Enter a stock ticker."),
-      textInput("stock5", "Enter a stock ticker."),
+      textInput("stock1", "Enter a stock ticker.", "AAPL"),
+      textInput("stock2", "Enter a stock ticker.", "AMZN"),
+      textInput("stock3", "Enter a stock ticker.", "MSFT"),
+      textInput("stock4", "Enter a stock ticker.", "GOOG"),
+      textInput("stock5", "Enter a stock ticker.", "FB"),
       actionButton("go", "LOCK IN SELECTIONS."),
       actionButton("plotit", "PLOT IT."),
       h3("Will Kramlinger, 10/13/2020")

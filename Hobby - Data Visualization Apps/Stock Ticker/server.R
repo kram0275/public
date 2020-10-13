@@ -9,11 +9,11 @@ library(plotly)
 shinyServer(function(input, output, session) {
   
   list.of.dfs <<- list() 
-  the.table <- reactiveValues()
+  react.val <- reactiveValues()
   
   observeEvent(
     input$go,
-    stocklist <<- c(
+    react.val$stocklist <<- c(
       if(input$stock1 != "") {as.character(input$stock1)} else {NULL},
       if(input$stock2 != "") {as.character(input$stock2)} else {NULL},
       if(input$stock3 != "") {as.character(input$stock3)} else {NULL},
@@ -43,14 +43,13 @@ shinyServer(function(input, output, session) {
       df.sub <- as.data.frame(df[df$Date >= input$thedates[1] & 
                                    df$Date <= input$thedates[2], ])
       row.names(df.sub) <- NULL
-      the.table$df <- df.sub
+      react.val$df <- df.sub
       # Start graphing
       the.plot <- ggplot(
         aes(x = Date, y = Close, color = Stock), data = df.sub) +
         geom_line(aes(group = Stock), data = df.sub) +
         labs() +
-        ggtitle("Closing Price History for Selected Stocks. Hover over data
-                for details.") +
+        ggtitle("Stock Performance History. Hover over data for details.") +
         scale_x_date(limits <- input$thedates) +
         xlab("Date") +
         ylab("Closing Price [$]") +
@@ -60,7 +59,7 @@ shinyServer(function(input, output, session) {
   )
   
 
-  output$danktable <- DT::renderDataTable(the.table$df)
+  output$danktable <- DT::renderDataTable(react.val$df)
   
   
 })
